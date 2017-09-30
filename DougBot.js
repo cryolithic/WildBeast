@@ -25,9 +25,9 @@ Logger.info('Initializing...')
 
 if (argv.shardmode && !isNaN(argv.shardcount)) {
   Logger.info('Starting in ShardMode')
-  bot = new Eris(Config.bot.token, {getAllUsers: true, maxShards: argv.shardcount})
+  bot = new Eris(Config.bot.token, {getAllUsers: true, maxShards: argv.shardcount, restMode: true})
 } else {
-  bot = new Eris(Config.bot.token, {getAllUsers: true})
+  bot = new Eris(Config.bot.token, {getAllUsers: true, restMode: true})
 }
 
 var bugsnag = require('bugsnag')
@@ -63,8 +63,13 @@ bot.on('messageCreate', msg => {
   for (var k in msg.channel.guild) {
     loggingGuild[k] = msg.channel.guild[k]
   }
+  loggingGuild.channels = []
+  loggingGuild.members = []
   loggingGuild.roles = []
   loggingGuild.emojis = []
+  loggingGuild.defaultChannel = []
+  loggingGuild.shard = []
+  loggingGuild.toString = 'no.'
   datacontrol.customize.getGuildData(msg.channel.guild).then(function (g) {
     if (!g.customize.prefix) {
       prefix = Config.settings.prefix
@@ -78,10 +83,10 @@ bot.on('messageCreate', msg => {
       suffix = msg.content.substr(prefix.length).split(' ')
       suffix = suffix.slice(1, suffix.length).join(' ')
     } else if (msg.content.startsWith(bot.user.mention)) {
-      cmd = msg.content.substr(bot.User.mention.length + 1).split(' ')[0].toLowerCase()
-      suffix = msg.content.substr(bot.User.mention.length).split(' ')
+      cmd = msg.content.substr(bot.user.mention.length + 1).split(' ')[0].toLowerCase()
+      suffix = msg.content.substr(bot.user.mention.length).split(' ')
       suffix = suffix.slice(2, suffix.length).join(' ')
-    } else if (msg.content.startsWith(bot.user.nickMention)) {
+    } else if (msg.content.startsWith(`<@!${bot.user.id}>`)) {
       cmd = msg.content.substr(bot.user.nickMention.length + 1).split(' ')[0].toLowerCase()
       suffix = msg.content.substr(bot.user.nickMention.length).split(' ')
       suffix = suffix.slice(2, suffix.length).join(' ')
@@ -97,8 +102,9 @@ bot.on('messageCreate', msg => {
         return // ignore JS build-in array functions
       }
       Logger.info(`Executing <${msg.cleanContent}> from ${msg.author.username}`, {
-        //author: msg.author,
-        //guild: loggingGuild,
+        author: msg.author.username,
+        authorID: msg.author.id,
+        guild: loggingGuild,
         botID: bot.user.id,
         cmd: cmd
       })

@@ -23,9 +23,9 @@ Commands.volume = {
   level: 1,
   fn: function (msg, suffix, bot) {
     v.volume(msg, suffix, bot).then(v => {
-      msg.channel.sendMessage(v)
+      msg.channel.createMessage(v)
     }).catch(err => {
-      msg.channel.sendMessage(err)
+      msg.channel.createMessage(err)
     })
   }
 }
@@ -80,26 +80,26 @@ Commands.playlist = {
   level: 0,
   fn: function (msg, suffix, bot) {
     suffix = suffix.toLowerCase().split(' ')
-    var connect = bot.VoiceConnections.find(v => v.voiceConnection.guild.id === msg.guild.id)
+    var connect = bot.VoiceConnections.find(v => v.voiceConnection.guild.id === msg.channel.guild.id)
     if (connect) {
       if (suffix[0] !== undefined && ['clear', 'delete', 'remove'].indexOf(suffix[0]) > -1) {
         checkLevel(msg, msg.author.id, msg.member.roles).then(x => {
           if (x >= 1) {
             if (suffix[0] === 'clear') {
               v.deleteFromPlaylist(msg, 'all').then(r => {
-                msg.channel.sendMessage(r)
+                msg.channel.createMessage(r)
               }).catch(err => {
-                msg.channel.sendMessage(err)
+                msg.channel.createMessage(err)
               })
             } else {
               v.deleteFromPlaylist(msg, (suffix[1])).then(r => {
-                msg.channel.sendMessage(`**${r}** has been removed from the playlist.`)
+                msg.channel.createMessage(`**${r}** has been removed from the playlist.`)
               }).catch(err => {
-                msg.channel.sendMessage(err)
+                msg.channel.createMessage(err)
               })
             }
           } else {
-            msg.channel.sendMessage('You do not have the required setlevel for this subcommand, check with the server owner if you should be allowed to do this, required level is 1 or higher.')
+            msg.channel.createMessage('You do not have the required setlevel for this subcommand, check with the server owner if you should be allowed to do this, required level is 1 or higher.')
           }
         })
       } else {
@@ -113,17 +113,17 @@ Commands.playlist = {
               break
             }
           }
-          msg.channel.sendMessage(arr.join('\n')).then((m) => {
+          msg.channel.createMessage(arr.join('\n')).then((m) => {
             setTimeout(() => {
               m.delete()
             }, 30000)
           })
         }).catch(() => {
-          msg.channel.sendMessage("It appears that there aren't any songs in the current queue.")
+          msg.channel.createMessage("It appears that there aren't any songs in the current queue.")
         })
       }
     } else {
-      msg.channel.sendMessage('I am not streaming music in this server.')
+      msg.channel.createMessage('I am not streaming music in this server.')
     }
   }
 }
@@ -150,7 +150,7 @@ Commands.request = {
   level: 1,
   fn: function (msg, suffix, bot) {
     if (!suffix) {
-      msg.reply('Please enter something to search for!')
+      msg.channel.createMessage(`<@${msg.author.id}>, Please enter something to search for!`)
     }
     var u = require('url').parse(suffix)
     if (u.host === null) {

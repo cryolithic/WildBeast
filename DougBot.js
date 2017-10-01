@@ -239,7 +239,7 @@ bot.on('messageCreate', msg => {
     }
   })
 })
-/*
+/* This will remain commented out due to customize needing a welcomechannel method
 bot.Dispatcher.on(Event.GUILD_MEMBER_ADD, function (s) {
   datacontrol.permissions.isKnown(s.guild)
   datacontrol.customize.isKnown(s.guild)
@@ -270,54 +270,44 @@ bot.Dispatcher.on(Event.GUILD_MEMBER_ADD, function (s) {
   })
   datacontrol.users.isKnown(s.member)
 })
+*/
 
-bot.Dispatcher.on(Event.GUILD_CREATE, function (s) {
-  if (!bot.connected) return
-  if (!s.becameAvailable) {
-    datacontrol.permissions.isKnown(s.guild)
-    datacontrol.customize.isKnown(s.guild)
+bot.on('guildCreate', function (guild) {
+  if (!bot.ready) return
+  datacontrol.permissions.isKnown(guild)
+  datacontrol.customize.isKnown(guild)
+})
+
+bot.on('guildUpdate', (newGuild, oldGuild) => {
+  if (!bot.ready) return
+  if (newGuild.ownerID !== oldGuild.ownerID) {
+    datacontrol.permissions.updateGuildOwner(newGuild) // TODO: Make datacontrol use .ownerID instead of owner_id
   }
 })
 
-bot.Dispatcher.on(Event.GUILD_UPDATE, g => {
-  if (!bot.connected) return
-  var guild = g.getChanges()
-  if (guild.before.owner_id !== guild.after.owner_id) {
-    datacontrol.permissions.updateGuildOwner(g.guild)
-  }
-})
-
-bot.Dispatcher.on(Event.GATEWAY_RESUMED, function () {
+bot.on('shardResume', function () {
   Logger.info('Connection to the Discord gateway has been resumed.')
 })
 
-bot.Dispatcher.on(Event.PRESENCE_MEMBER_INFO_UPDATE, (user) => {
-  datacontrol.users.isKnown(user.new).then(() => {
-    if (user.old.username !== user.new.username) {
-      datacontrol.users.namechange(user.new).catch((e) => {
+bot.on('userUpdate', (newUser, oldUser) => {
+  datacontrol.users.isKnown(newUser).then(() => {
+    if (newUser.username !== oldUser.username) {
+      datacontrol.users.namechange(newUser).catch((e) => {
         Logger.error(e)
       })
     }
   })
 })
 
-bot.Dispatcher.on(Event.GATEWAY_HELLO, (gatewayInfo) => {
-  Logger.debug(`Gateway trace, ${gatewayInfo.data._trace}`, {
-    botID: bot.User.id,
-    gatewayTrace: gatewayInfo.data._trace
-  })
-})
-
-bot.Dispatcher.on(Event.DISCONNECTED, function (e) {
-  Logger.error('Disconnected from the Discord gateway: ' + e.error)
+bot.on('shardDisconnect', function (error, id) {
+  Logger.error(`Shard ${id} disconnected from the Discord gateway`, error)
   Logger.info('Trying to login again...')
-  start()
 })
 
-bot.Dispatcher.onAny((type, data) => {
-  if (data.type === 'READY' || type === 'VOICE_CHANNEL_JOIN' || type === 'VOICE_CHANNEL_LEAVE' || type.indexOf('VOICE_USER') === 0 || type === 'PRESENCE_UPDATE' || type === 'TYPING_START' || type === 'GATEWAY_DISPATCH') return
-  Bezerk.emit(type, data, bot)
-})*/
+// bot.onAny((type, data) => { TODO: Find equivalent
+//   if (data.type === 'READY' || type === 'VOICE_CHANNEL_JOIN' || type === 'VOICE_CHANNEL_LEAVE' || type.indexOf('VOICE_USER') === 0 || type === 'PRESENCE_UPDATE' || type === 'TYPING_START' || type === 'GATEWAY_DISPATCH') return
+//   Bezerk.emit(type, data, bot)
+// })
 
 process.on('unhandledRejection', (reason, p) => {
   if (p !== null && reason !== null) {

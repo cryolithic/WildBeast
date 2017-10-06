@@ -23,9 +23,9 @@ var datacontrol = runtime.datacontrol
 
 Logger.info('Initializing...')
 
-if (argv.shardmode && !isNaN(argv.shardcount)) {
+if (argv.shardmode && !isNaN(argv.firstShard)&& !isNaN(argv.lastShard)) {
   Logger.info('Starting in ShardMode')
-  bot = new Eris(Config.bot.token, {getAllUsers: true, maxShards: argv.shardcount, restMode: true})
+  bot = new Eris(Config.bot.token, {getAllUsers: true, firstShardID: argv.firstShard, lastShardID: arv.lastShard, restMode: true})
 } else {
   bot = new Eris(Config.bot.token, {getAllUsers: true, restMode: true})
 }
@@ -273,15 +273,13 @@ bot.Dispatcher.on(Event.GUILD_MEMBER_ADD, function (s) {
 */
 
 bot.on('guildCreate', function (guild) {
-  if (!bot.ready) return
   datacontrol.permissions.isKnown(guild)
   datacontrol.customize.isKnown(guild)
 })
 
 bot.on('guildUpdate', (newGuild, oldGuild) => {
-  if (!bot.ready) return
   if (newGuild.ownerID !== oldGuild.ownerID) {
-    datacontrol.permissions.updateGuildOwner(newGuild) // TODO: Make datacontrol use .ownerID instead of owner_id
+    datacontrol.permissions.updateGuildOwner(newGuild)
   }
 })
 

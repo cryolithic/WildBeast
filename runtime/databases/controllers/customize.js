@@ -40,10 +40,10 @@ exports.getGuildData = function (guild) {
 
 exports.volume = function (msg) {
   return new Promise(function (resolve, reject) {
-    getDatabaseDocument(msg.guild).then((i) => {
+    getDatabaseDocument(msg.channel.guild).then((i) => {
       resolve((i.customize.volume === (null || undefined)) ? 25 : i.customize.volume)
     }).catch(() => {
-      initialize(msg.guild)
+      initialize(msg.channel.guild)
       reject('No database')
     })
   })
@@ -62,14 +62,14 @@ exports.check = function (guild) {
 
 exports.reply = function (msg, what) {
   return new Promise(function (resolve, reject) {
-    getDatabaseDocument(msg.guild).then((t) => {
+    getDatabaseDocument(msg.channel.guild).then((t) => {
       if (!t.customize.hasOwnProperty(what)) {
         return reject('Unsupported reply method')
       } else {
         return resolve(t.customize[what])
       }
     }).catch((e) => {
-      initialize(msg.guild)
+      initialize(msg.channel.guild)
       reject(e)
     })
   })
@@ -132,10 +132,10 @@ exports.restore = function (guild) {
 exports.adjust = function (msg, what, how) {
   /* eslint indent: 0 */
   return new Promise(function (resolve, reject) {
-    getDatabaseDocument(msg.guild).then(() => {
+    getDatabaseDocument(msg.channel.guild).then(() => {
       switch (what) {
         case 'nsfw':
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               nsfw: how
             }
@@ -146,7 +146,7 @@ exports.adjust = function (msg, what, how) {
           })
           break
         case 'permissions':
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               perms: how
             }
@@ -157,10 +157,10 @@ exports.adjust = function (msg, what, how) {
           })
           break
         case 'prefix':
-          if (how.indexOf('"') === -1) {
-            return reject('`Put new prefixes between double quotes please.`')
+          if (!how.startsWith('"') || !how.endsWith('"')) {
+            return reject('`Put new prefix between double quotes please.`')
           }
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               prefix: how.split('"')[1]
             }
@@ -171,7 +171,7 @@ exports.adjust = function (msg, what, how) {
           })
           break
         case 'timeout':
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               timeout: how
             }
@@ -185,7 +185,7 @@ exports.adjust = function (msg, what, how) {
           if (how !== 'on' && how !== 'off' && how !== 'private' && how !== 'channel') {
             return reject('`Invalid target.`')
           }
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               welcome: how
             }
@@ -196,7 +196,7 @@ exports.adjust = function (msg, what, how) {
           })
           break
         case 'welcome':
-          r.db('Discord').table('Guilds').get(msg.guild.id).update({
+          r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
               welcomeMessage: how
             }
@@ -210,7 +210,7 @@ exports.adjust = function (msg, what, how) {
           if (isNaN(how) || how < 0 || how > 100) {
             reject('this must be a number between 0 and 100.')
           } else {
-            r.db('Discord').table('Guilds').get(msg.guild.id).update({
+            r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
               customize: {
                 volume: how
               }
@@ -226,7 +226,7 @@ exports.adjust = function (msg, what, how) {
           break
       }
     }).catch(() => {
-      initialize(msg.guild)
+      initialize(msg.channel.guild)
       reject('No database')
     })
   })

@@ -222,7 +222,7 @@ Commands.yomomma = {
 Commands.advice = {
   name: 'advice',
   help: "I'll give you some fantastic advice!",
-  noDM: true, // Ratelimits Ratelimits Ratelimits Ratelimits
+  noDM: true,
   timeout: 5,
   level: 0,
   fn: function (msg) {
@@ -584,8 +584,19 @@ Commands.magic8ball = {
       'Possibly.',
       'There is a small chance.'
     ]
-    var answer = answers[Math.floor(Math.random() * answers.length)]
-    msg.channel.createMessage('The Magic 8 Ball says:\n```' + answer + '```')
+    msg.channel.createMessage('The Magic 8 Ball says:\n```' + answerShuffle(answers)[0] + '```')
+    
+    function answerShuffle(array) {
+        let rand, index = -1,
+          length = array.length,
+          result = Array(length)
+        while (++index < length) {
+          rand = Math.floor(Math.random() * (index + 1))
+          result[index] = result[rand]
+          result[rand] = array[index]
+        }
+        return(result)
+    }
   }
 }
 

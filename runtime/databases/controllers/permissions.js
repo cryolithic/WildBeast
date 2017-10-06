@@ -27,10 +27,10 @@ exports.checkLevel = function (msg, user, roles) {
         if (u !== null) {
           if (u.banned) {
             return resolve(-1)
-          } else if (msg.isPrivate || !msg.guild) {
+          } else if (msg.channel.type !== 0) {
             return resolve(0)
           } else {
-            getDatabaseDocument(msg.guild).then((d) => {
+            getDatabaseDocument(msg.channel.guild).then((d) => {
               if (user === d.superUser) {
                 return resolve(4)
               }
@@ -59,13 +59,15 @@ exports.checkLevel = function (msg, user, roles) {
               }
               return resolve(level)
             }).catch((e) => {
-              initialize(msg.guild)
-              reject(e)
+              initialize(msg.channel.guild)
+              return reject(e)
             })
           }
         } else {
           return resolve(0)
         }
+      }).catch(e => {
+        return reject(e)
       })
     }
   })
@@ -73,11 +75,11 @@ exports.checkLevel = function (msg, user, roles) {
 
 exports.adjustLevel = function (msg, users, level, roles) {
   return new Promise(function (resolve, reject) {
-    getDatabaseDocument(msg.guild).then((d) => {
-      var roleIds = roles.map((x) => x.id)
-      var userIds = users.map((x) => x.id)
+    getDatabaseDocument(msg.channel.guild).then((d) => {
+      var roleIds = roles
+      var userIds = typeof users === 'object' ? Array(users.id) : users.map((x) => x.id)
 
-      if (msg.mention_everyone) {
+      if (msg.mentionEveryone) {
         d.perms.standard.everyone = level
       }
 
@@ -103,14 +105,14 @@ exports.adjustLevel = function (msg, users, level, roles) {
         d.perms.standard.negative.push.apply(d.perms.standard.negative, userIds)
       }
 
-      r.db('Discord').table('Guilds').get(msg.guild.id).update(d).run().then(() => {
+      r.db('Discord').table('Guilds').get(msg.channel.guild.id).update(d).run().then(() => {
         resolve('Done!')
       }).catch((e) => {
         reject(e)
       })
-    }).catch(() => {
-      initialize(msg.guild)
-      reject()
+    }).catch((e) => {
+      initialize(msg.channel.guild)
+      reject(e)
     })
   })
 }
@@ -133,63 +135,10 @@ exports.restore = function (guild) {
   })
 }
 
-exports.checkNSFW = function (msg) {
-  return new Promise(function (resolve, reject) {
-    getDatabaseDocument(msg.channel.guild).then((d) => {
-      if (d.perms.nsfw.indexOf(msg.channel.id) > -1) {
-        resolve(true)
-      } else {
-        resolve(false)
-      }
-    }).catch((e) => reject(e))
-  })
-}
-
-exports.adjustNSFW = function (msg, what) {
-  return new Promise(function (resolve, reject) {
-    /* eslint indent: 0 */
-    switch (what) {
-      case 'on':
-        getDatabaseDocument(msg.channel.guild).then((d) => {
-          if (d.perms.nsfw.indexOf(msg.channel.id) > -1) {
-            resolve(1)
-          } else {
-            d.perms.nsfw.push(msg.channel.id.toString())
-            r.db('Discord').table('Guilds').get(msg.channel.guild.id).update(d).run().then(() => {
-              resolve(1)
-            }).catch((e) => {
-              Logger.error(e)
-              reject(e)
-            })
-          }
-        }).catch((e) => reject(e))
-        break
-      case 'off':
-        getDatabaseDocument(msg.channel.guild).then((d) => {
-          if (d.perms.nsfw.indexOf(msg.channel.id) > -1) {
-            d.perms.nsfw.splice(d.perms.nsfw.indexOf(msg.channel.id), 1)
-            r.db('Discord').table('Guilds').get(msg.channel.guild.id).update(d).run().then(() => {
-              resolve(0)
-            }).catch((e) => {
-              Logger.error(e)
-              reject(e)
-            })
-          } else {
-            resolve(0)
-          }
-        }).catch((e) => reject(e))
-        break
-      default:
-        reject('Unknown option')
-        break
-    }
-  })
-}
-
 exports.updateGuildOwner = function (guild) {
   return new Promise(function (resolve, reject) {
     getDatabaseDocument(guild).then(d => {
-      d.superUser = guild.owner.id
+      d.superUser = guild.ownerID
       r.db('Discord').table('Guilds').get(guild.id).update(d).run().then(() => {
         resolve(true)
       })
@@ -226,7 +175,7 @@ function initialize (guild) {
         },
         nsfw: []
       },
-      superUser: guild.owner_id
+      superUser: guild.ownerID
     }
     r.db('Discord').table('Guilds').insert(doc).run().then(() => {
       resolve('ok')

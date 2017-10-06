@@ -28,7 +28,7 @@ Commands.ping = {
   help: "I'll reply to you with pong!",
   timeout: 10,
   level: 0,
-  fn: function (msg, suffix, bot) {
+  fn: function (msg) {
     msg.channel.createMessage(`Pong! \nLatency: ${msg.channel.guild.shard.latency} ms.`)
   }
 }
@@ -295,12 +295,8 @@ Commands['leave-server'] = {
   noDM: true,
   level: 3,
   fn: function (msg) {
-    if (!msg.channel.guild) { // ghetto dm detection
-      msg.channel.createMessage('You can not do this in a DM!')
-    } else {
       msg.channel.createMessage('Okay, cya!')
       msg.channel.guild.leave()
-    }
   }
 }
 
@@ -346,7 +342,7 @@ Commands.setlevel = {
       msg.channel.createMessage(`<@${msg.author.id}>, Your first parameter is not a number!`)
     } else if (suffix[0] > 3) {
       msg.channel.createMessage('Setting a level higher than 3 is not allowed.')
-    } else if (msg.mentions.length === 0 && msg.mention_roles.length === 0 && !msg.mention_everyone) {
+    } else if (msg.mentions.length === 0 && msg.roleMentions.length === 0 && !msg.mentionEveryone) {
       msg.channel.createMessage(`<@${msg.author.id}>, Please @mention the user(s)/role(s) you want to set the permission level of.`)
     } else if (msg.mentions.length === 1 && msg.mentions[0].id === msg.channel.guild.ownerID) {
       msg.channel.createMessage(`<@${msg.author.id}>, You cannot set the server owner's level.`)
@@ -433,35 +429,53 @@ Commands.takerole = {
 Commands.rankup = {
   name: 'rankup',
   help: 'Level up somebody\'s level by one.',
+  noDM: true,
   timeout: 5,
   level: 3,
-  fn: function (msg, suffix) {
+  fn: function (msg, suffix, bot) {
     var Permissions = require('../databases/controllers/permissions.js')
-    var array = []
-    if (suffix && msg.mentions.length > 0) {
-      msg.mentions.map(function (user) {
-        Permissions.checkLevel(msg, msg.author.id, msg.member.roles.map(r => msg.channel.guild.roles.get(r))).then((authorlevel) => {
-          Permissions.checkLevel(msg, user.id, msg.channel.guild.members.get(user.id).map(r => msg.channel.guild.roles.get(r))).then(function (level) {
-            if (authorlevel > 3 && level >= 3) {
-              msg.channel.createMessage(`<@${msg.author.id}>, ${user.username} is already level 3 or more.`)
-            } else if (authorlevel === 3 && level >= 2) {
-              msg.channel.createMessage(`<@${msg.author.id}>, ${user.username} is already level 2 or more.`)
-            } else if ((authorlevel === 3 && level < 2) || (authorlevel > 3 && level < 3)) {
-              array.push(user.username)
-              Permissions.adjustLevel(msg, msg.mentions, level + 1, msg.mention_roles)
-            }
-            if (msg.mentions.indexOf(user) + 1 === msg.mentions.length && array.length > 0) {
-              msg.channel.createMessage(`<@${msg.author.id}>, **${array.join(', ')}** have been leveled up!`)
-            }
-          }).catch(function (err) {
-            msg.channel.createMessage('Help! Something went wrong!')
-            bugsnag.notify(err)
-            Logger.error(err)
-          })
-        })
-      })
+    if (msg.mentions.length > 0) {
+      Permissions.checkLevel(msg, msg.author.id, msg.member.roles).then((authorLevel) => {
+        let list = {success: [], error: {level2: [], level3: []}}
+        msg.mentions = msg.mentions.filter(u => u.id !== bot.user.id)
+        safeLoop(msg, authorLevel, msg.mentions, list)
+      }).catch(e => console.log(e))
     } else {
       msg.channel.createMessage(`<@${msg.author.id}>, Please @mention the user(s) you want to rank up the permission level of.`)
+    }
+    function safeLoop (msg, authorLevel, users, list) {
+      if (users.length === 0) {
+        let resp = ''
+        if (list.success.length !== 0) resp += `The following have been leveled up: ${list.success.join(', ')}`
+        if (list.error.level2.length !== 0) resp += `\nThe following are already at level 2 or more: ${list.error.level2.join(', ')}`
+        if (list.error.level3.length !== 0) resp += `\nThe following are already at level 3 or more: ${list.error.level3.join(', ')}`
+        msg.channel.createMessage(`<@${msg.author.id}>, ${resp}`)
+      } else {
+        Permissions.checkLevel(msg, users[0].id, msg.channel.guild.members.get(users[0].id).roles).then(level => {
+          if (authorLevel > 3 && level >= 3) {
+            list.error.level3.push(users[0].username)
+            users.shift()
+            safeLoop(msg, authorLevel, users, list)
+          } else if (authorLevel === 3 && level >= 2) {
+            list.error.level2.push(users[0].username)
+            users.shift()
+            safeLoop(msg, authorLevel, users, list)
+          } else if ((authorLevel === 3 && level < 2) || (authorLevel > 3 && level < 3)) {
+            Permissions.adjustLevel(msg, users[0], level + 1, []).then(() => {
+              list.success.push(users[0].username)
+              users.shift()
+              safeLoop(msg, authorLevel, users, list)
+            }).catch(err => {
+              bugsnag.notify(err)
+              Logger.error(err)
+            })
+          }
+        }).catch(err => {
+          msg.channel.createMessage('Help! Something went wrong!')
+          bugsnag.notify(err)
+          Logger.error(err)
+        })
+      }
     }
   }
 }
@@ -470,9 +484,8 @@ Commands.setnsfw = {
   name: 'setnsfw',
   help: 'deprecated',
   noDM: true,
-  usage: '<on | off>',
   level: 3,
-  fn: function (msg, suffix) {
+  fn: function (msg) {
     msg.channel.createMessage(`<@${msg.author.id}>, **setnsfw** has been deprecated. Please set the channel to NSFW in the settings if you want to use NSFW commands!`)
   }
 }
@@ -601,7 +614,7 @@ Commands.userinfo = {
       return
     }
     msg.mentions.map(function (user) {
-      Permissions.checkLevel(msg, user.id, msg.channel.guild.members.get(user.id).roles.map(r => msg.channel.guild.roles.get(r))).then(function (level) {
+      Permissions.checkLevel(msg, user.id, msg.channel.guild.members.get(user.id).roles).then(function (level) {
         var guild = msg.channel.guild
         var member = guild.members.get(user.id)
         var tempRoles = member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) { return a.position - b.position }).reverse()

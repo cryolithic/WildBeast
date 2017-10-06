@@ -58,7 +58,7 @@ exports.isKnown = function (user) {
   })
 }
 
-exports.globalBan = function (what, user, reason) { //This was just a meme tbh.
+exports.globalBan = function (what, user, reason) { // This was just a meme tbh.
   return new Promise((resolve, reject) => {
     getDatabaseDocument(user).then(d => {
       switch (what) {

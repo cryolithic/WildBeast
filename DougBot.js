@@ -23,9 +23,14 @@ var datacontrol = runtime.datacontrol
 
 Logger.info('Initializing...')
 
-if (argv.shardmode && !isNaN(argv.firstShard)&& !isNaN(argv.lastShard)) {
+if (argv.shardmode && !isNaN(argv.firstShard) && !isNaN(argv.lastShard)) {
   Logger.info('Starting in ShardMode')
-  bot = new Eris(Config.bot.token, {getAllUsers: true, firstShardID: argv.firstShard, lastShardID: arv.lastShard, restMode: true})
+  bot = new Eris(Config.bot.token, {
+    getAllUsers: true,
+    firstShardID: argv.firstShard,
+    lastShardID: argv.lastShard,
+    restMode: true
+  })
 } else {
   bot = new Eris(Config.bot.token, {getAllUsers: true, restMode: true})
 }
@@ -151,26 +156,26 @@ bot.on('messageCreate', msg => {
                       })
                     }
                   } else {
-                      if (msg.channel.nsfw === true) {
-                        try {
-                          commands[cmd].fn(msg, suffix, bot)
-                        } catch (e) {
-                          bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
-                          Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-                            author: msg.author,
-                            guild: loggingGuild,
-                            botID: bot.User.id,
-                            cmd: cmd,
-                            error: e
-                          })
-                        }
-                      } else {
-                        if (g.customize.nsfw === null || g.customize.nsfw === 'default') {
-                          bot.createMessage(msg.channel.id, 'This channel does not allow NSFW commands, enable them by setting this channel to NSFW')
-                        } else {
-                          bot.createMessage(msg.channel.id, g.customize.nsfw.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.guild.name).replace(/%channel/, msg.channel.name))
-                        }
+                    if (msg.channel.nsfw === true) {
+                      try {
+                        commands[cmd].fn(msg, suffix, bot)
+                      } catch (e) {
+                        bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
+                        Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
+                          author: msg.author,
+                          guild: loggingGuild,
+                          botID: bot.User.id,
+                          cmd: cmd,
+                          error: e
+                        })
                       }
+                    } else {
+                      if (g.customize.nsfw === null || g.customize.nsfw === 'default') {
+                        bot.createMessage(msg.channel.id, 'This channel does not allow NSFW commands, enable them by setting this channel to NSFW')
+                      } else {
+                        bot.createMessage(msg.channel.id, g.customize.nsfw.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.guild.name).replace(/%channel/, msg.channel.name))
+                      }
+                    }
                   }
                 } else {
                   if (g.customize.perms === null || g.customize.perms === 'default') {

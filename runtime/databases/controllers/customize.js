@@ -21,15 +21,17 @@ exports.getGuildData = function (guild) {
         return resolve(g)
       } else {
         initialize(guild)
-        return resolve({customize: {
-          nsfw: null,
-          perms: null,
-          prefix: null,
-          volume: 25,
-          timeout: null,
-          welcome: false,
-          welcomeMessage: null
-        }})
+        return resolve({
+          customize: {
+            nsfw: null,
+            perms: null,
+            prefix: null,
+            volume: 25,
+            timeout: null,
+            welcome: false,
+            welcomeMessage: null
+          }
+        })
       }
     }).catch(err => {
       Logger.error(`REQL Error: ${err}`)

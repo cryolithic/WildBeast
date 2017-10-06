@@ -25,7 +25,7 @@ function getUptime () {
 
 Commands.ping = {
   name: 'ping',
-  help: "I'll reply to you with pong!",
+  help: 'I\'ll reply to you with pong!',
   timeout: 10,
   level: 0,
   fn: function (msg) {
@@ -201,30 +201,30 @@ Commands.twitch = {
     }
     var url = 'https://api.twitch.tv/kraken/streams/' + suffix
     request.get(url)
-    .set({'Accept': 'application/vnd.twitchtv.v3+json', 'Client-ID': config.api_keys.twitchId})
-    .end((error, response) => {
-      if (error) {
-        bugsnag.notify(error)
-      }
-      if (!error && response.statusCode === 200) {
-        var resp
-        try {
-          resp = response.body
-        } catch (e) {
-          msg.channel.createMessage('The API returned an unconventional response.')
+      .set({'Accept': 'application/vnd.twitchtv.v3+json', 'Client-ID': config.api_keys.twitchId})
+      .end((error, response) => {
+        if (error) {
+          bugsnag.notify(error)
         }
-        if (resp.stream !== null) {
-          msg.channel.createMessage(suffix + ' is currently live at https://www.twitch.tv/' + suffix)
-          return
-        } else if (resp.stream === null) {
-          msg.channel.createMessage(suffix + ' is not currently streaming')
+        if (!error && response.statusCode === 200) {
+          var resp
+          try {
+            resp = response.body
+          } catch (e) {
+            msg.channel.createMessage('The API returned an unconventional response.')
+          }
+          if (resp.stream !== null) {
+            msg.channel.createMessage(suffix + ' is currently live at https://www.twitch.tv/' + suffix)
+            return
+          } else if (resp.stream === null) {
+            msg.channel.createMessage(suffix + ' is not currently streaming')
+            return
+          }
+        } else if (!error && response.statusCode === 404) {
+          msg.channel.createMessage('Channel does not exist!')
           return
         }
-      } else if (!error && response.statusCode === 404) {
-        msg.channel.createMessage('Channel does not exist!')
-        return
-      }
-    })
+      })
   }
 }
 
@@ -256,7 +256,7 @@ Commands.customize = {
 
 Commands.info = {
   name: 'info',
-  help: "I'll print some information about me.",
+  help: 'I\'ll print some information about me.',
   timeout: 10,
   level: 0,
   fn: function (msg, suffix, bot) {
@@ -276,27 +276,29 @@ Commands.info = {
       field.push({name: 'Shard ID', value: '```\n' + argv.shardid + '```', inline: true})
       field.push({name: 'Shard Count', value: '```\n' + argv.shardcount + '```', inline: true})
     }
-    msg.channel.createMessage({ embed: {
-      color: 0x3498db,
-      author: {icon_url: bot.user.avatarURL, name: `${bot.user.username}#${bot.user.discriminator} (${bot.user.id})`},
-      title: `Running on WildBeast version ${require('../../package.json').version}`,
-      timestamp: new Date(),
-      fields: field,
-      description: '*My developer is Dougley#6248*',
-      url: 'https://github.com/TheSharks/WildBeast',
-      footer: {text: `Online for ${getUptime()}`}
-    }})
+    msg.channel.createMessage({
+      embed: {
+        color: 0x3498db,
+        author: {icon_url: bot.user.avatarURL, name: `${bot.user.username}#${bot.user.discriminator} (${bot.user.id})`},
+        title: `Running on WildBeast version ${require('../../package.json').version}`,
+        timestamp: new Date(),
+        fields: field,
+        description: '*My developer is Dougley#6248*',
+        url: 'https://github.com/TheSharks/WildBeast',
+        footer: {text: `Online for ${getUptime()}`}
+      }
+    })
   }
 }
 
 Commands['leave-server'] = {
   name: 'leave-server',
-  help: "I'll leave this server if I am not welcome here.",
+  help: 'I\'ll leave this server if I am not welcome here.',
   noDM: true,
   level: 3,
   fn: function (msg) {
-      msg.channel.createMessage('Okay, cya!')
-      msg.channel.guild.leave()
+    msg.channel.createMessage('Okay, cya!')
+    msg.channel.guild.leave()
   }
 }
 
@@ -373,7 +375,7 @@ Commands.addrole = {
     let roleToAdd = suffix.split(' ').splice(msg.mentions.length).join(' ')
     let role = msg.channel.guild.roles.find(r => r.name === roleToAdd).id
     if (!guildPerms.manageRoles) {
-      msg.channel.createMessage(`<@${msg.author.id}>, You don\'t have Manage Roles permission here.`)
+      msg.channel.createMessage(`<@${msg.author.id}>, You don't have Manage Roles permission here.`)
     } else if (!botPerms.manageRoles) {
       msg.channel.createMessage('I don\'t have Manage Roles permission here, sorry!')
     } else if (msg.mentions.length === 0 && !msg.mentionEveryone) {
@@ -406,7 +408,7 @@ Commands.takerole = {
     let roleToRemove = suffix.split(' ').splice(msg.mentions.length).join(' ')
     let role = msg.channel.guild.roles.find(r => r.name === roleToRemove).id
     if (!guildPerms.manageRoles) {
-      msg.channel.createMessage(`<@${msg.author.id}>, You don\'t have Manage Roles permission here.`)
+      msg.channel.createMessage(`<@${msg.author.id}>, You don't have Manage Roles permission here.`)
     } else if (!botPerms.manageRoles) {
       msg.channel.createMessage('I don\'t have Manage Roles permission here, sorry!')
     } else if (msg.mentions.length === 0 && !msg.mentionEveryone) {
@@ -443,6 +445,7 @@ Commands.rankup = {
     } else {
       msg.channel.createMessage(`<@${msg.author.id}>, Please @mention the user(s) you want to rank up the permission level of.`)
     }
+
     function safeLoop (msg, authorLevel, users, list) {
       if (users.length === 0) {
         let resp = ''
@@ -492,11 +495,11 @@ Commands.setnsfw = {
 
 Commands.hello = {
   name: 'hello',
-  help: "I'll respond to you with hello along with a GitHub link!",
+  help: 'I\'ll respond to you with hello along with a GitHub link!',
   timeout: 20,
   level: 0,
   fn: function (msg, suffix, bot) {
-    msg.channel.createMessage('Hi ' + msg.author.username + ", I'm " + bot.user.username + ' and I was developed by the team over at TheSharks! Improve me by contributing to my source code on GitHub: https://github.com/TheSharks/WildBeast')
+    msg.channel.createMessage('Hi ' + msg.author.username + ', I\'m ' + bot.user.username + ' and I was developed by the team over at TheSharks! Improve me by contributing to my source code on GitHub: https://github.com/TheSharks/WildBeast')
   }
 }
 
@@ -514,10 +517,12 @@ Commands.setstatus = {
       msg.channel.createMessage(`Cleared status.`)
     } else {
       if (/^https?/.test(first[0])) {
-        bot.editStatus(null, {game: {
-          name: (first[1] ? suffix.substring(first[0].length + 1) : null),
-          url: first[0]
-        }})
+        bot.editStatus(null, {
+          game: {
+            name: (first[1] ? suffix.substring(first[0].length + 1) : null),
+            url: first[0]
+          }
+        })
         msg.channel.createMessage(`Set status to streaming with message ${suffix.substring(first[0].length + 1)}`)
       } else if (['online', 'idle', 'dnd', 'invisible'].indexOf(first[0]) > -1) {
         bot.editStatus(first[0], {
@@ -527,9 +532,11 @@ Commands.setstatus = {
       } else if (suffix.substring(first[0].length + 1).length < 1) {
         msg.reply('Can only be `online`, `idle`, `dnd` or `invisible`!')
       } else {
-        bot.editStatus('online', {game: {
-          name: null
-        }})
+        bot.editStatus('online', {
+          game: {
+            name: null
+          }
+        })
         msg.channel.createMessage(`Cleared status.`)
       }
     }
@@ -538,50 +545,67 @@ Commands.setstatus = {
 
 Commands['server-info'] = {
   name: 'server-info',
-  help: "I'll tell you some information about the server you're currently in.",
+  help: 'I\'ll tell you some information about the server you\'re currently in.',
   aliases: ['serverinfo'],
   noDM: true,
   timeout: 20,
   level: 0,
   fn: function (msg, suffix, bot) {
-      var field = [{name: 'Server name', value: `${msg.channel.guild.name} (${msg.channel.guild.id})`},
-        {name: 'Owned by', value: '```\n' + `${bot.users.get(msg.channel.guild.ownerID).username}#${bot.users.get(msg.channel.guild.ownerID).username} (${bot.users.get(msg.channel.guild.ownerID).username})` + '```', inline: true},
-        {name: 'Current Region', value: '```\n' + msg.channel.guild.region + '```', inline: true},
-        {name: 'Members', value: '```\n' + msg.channel.guild.members.size + '```', inline: true},
-        {name: 'Text Channels', value: '```\n' + msg.channel.guild.channels.filter(c => c.type === 0).length + '```', inline: true},
-        {name: 'Voice Channels', value: '```\n' + msg.channel.guild.channels.filter(c => c.type === 2).length + '```', inline: true},
-        {name: 'Total Roles', value: '```\n' + msg.channel.guild.roles.size + '```', inline: true}]
+    var field = [{name: 'Server name', value: `${msg.channel.guild.name} (${msg.channel.guild.id})`},
+      {
+        name: 'Owned by',
+        value: '```\n' + `${bot.users.get(msg.channel.guild.ownerID).username}#${bot.users.get(msg.channel.guild.ownerID).username} (${bot.users.get(msg.channel.guild.ownerID).username})` + '```',
+        inline: true
+      },
+      {name: 'Current Region', value: '```\n' + msg.channel.guild.region + '```', inline: true},
+      {name: 'Members', value: '```\n' + msg.channel.guild.members.size + '```', inline: true},
+      {
+        name: 'Text Channels',
+        value: '```\n' + msg.channel.guild.channels.filter(c => c.type === 0).length + '```',
+        inline: true
+      },
+      {
+        name: 'Voice Channels',
+        value: '```\n' + msg.channel.guild.channels.filter(c => c.type === 2).length + '```',
+        inline: true
+      },
+      {name: 'Total Roles', value: '```\n' + msg.channel.guild.roles.size + '```', inline: true}]
 
-      if (msg.channel.guild.afkChannelID === null) {
-        field.push({name: 'AFK-Channel', value: '```\nNone```'})
-      } else {
-        field.push({name: 'AFK-Channel', value: '```\n' + `${msg.channel.guild.channels.get(msg.channel.guild.afkChannelID).name} (${msg.channel.guild.channels.get(msg.channel.guild.afkChannelID).id})` + '```'})
-      }
-      var embed = {
-        author: {name: `Information requested by ${msg.author.username}`},
-        timestamp: new Date(),
-        color: 0x3498db,
-        fields: field,
-        footer: {text: `Online for ${getUptime()}`, icon_url: bot.user.avatarURL}
-      }
-      if (msg.channel.guild.icon) {
-        embed.thumbnail = {url: msg.channel.guild.iconURL}
-        embed.url = msg.channel.guild.iconURL
-      }
-      msg.channel.createMessage({embed: embed})
+    if (msg.channel.guild.afkChannelID === null) {
+      field.push({name: 'AFK-Channel', value: '```\nNone```'})
+    } else {
+      field.push({
+        name: 'AFK-Channel',
+        value: '```\n' + `${msg.channel.guild.channels.get(msg.channel.guild.afkChannelID).name} (${msg.channel.guild.channels.get(msg.channel.guild.afkChannelID).id})` + '```'
+      })
+    }
+    var embed = {
+      author: {name: `Information requested by ${msg.author.username}`},
+      timestamp: new Date(),
+      color: 0x3498db,
+      fields: field,
+      footer: {text: `Online for ${getUptime()}`, icon_url: bot.user.avatarURL}
+    }
+    if (msg.channel.guild.icon) {
+      embed.thumbnail = {url: msg.channel.guild.iconURL}
+      embed.url = msg.channel.guild.iconURL
+    }
+    msg.channel.createMessage({embed: embed})
   }
 }
 
 Commands.userinfo = {
   name: 'userinfo',
-  help: "I'll get some information about the user you've mentioned.",
+  help: 'I\'ll get some information about the user you\'ve mentioned.',
   noDM: true,
   level: 0,
   fn: function (msg, suffix, bot) {
     var Permissions = require('../databases/controllers/permissions.js')
     if (msg.mentions.length === 0) {
       Permissions.checkLevel(msg, msg.author.id, msg.member.roles).then((level) => {
-        var tempRoles = msg.member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) { return a.position - b.position }).reverse()
+        var tempRoles = msg.member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
+          return a.position - b.position
+        }).reverse()
         var roles = []
         for (var i in tempRoles) {
           roles.push(tempRoles[i].name)
@@ -617,7 +641,9 @@ Commands.userinfo = {
       Permissions.checkLevel(msg, user.id, msg.channel.guild.members.get(user.id).roles).then(function (level) {
         var guild = msg.channel.guild
         var member = guild.members.get(user.id)
-        var tempRoles = member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) { return a.position - b.position }).reverse()
+        var tempRoles = member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
+          return a.position - b.position
+        }).reverse()
         var roles = []
         for (var i in tempRoles) {
           roles.push(tempRoles[i].name)
@@ -653,13 +679,13 @@ Commands.userinfo = {
 
 Commands['join-server'] = {
   name: 'join-server',
-  help: "I'll join the server you've requested me to join, as long as the invite is valid and I'm not banned of already in the requested server.",
+  help: 'I\'ll join the server you\'ve requested me to join, as long as the invite is valid and I\'m not banned of already in the requested server.',
   aliases: ['join', 'joinserver', 'invite'],
   usage: '<bot-mention> <instant-invite>',
   level: 0,
   fn: function (msg, suffix, bot) {
     if (bot.user.bot) {
-      msg.channel.createMessage("Sorry, bot accounts can't accept instant invites, instead, use my OAuth URL: <" + config.bot.oauth + '>')
+      msg.channel.createMessage('Sorry, bot accounts can\'t accept instant invites, instead, use my OAuth URL: <' + config.bot.oauth + '>')
       return
     } else {
       Logger.warn('Using user accounts is deprecated!')
@@ -834,7 +860,8 @@ Commands.softban = {
         let banMembers = {success: [], error: []}
         let reasonWords = []
         suffix.split(' ').map((id) => {
-          if (id.startsWith('<@')) {} else {
+          if (id.startsWith('<@')) {
+          } else {
             reasonWords.push(id)
           }
         })
@@ -929,7 +956,7 @@ Commands.softban = {
 
 Commands.prefix = {
   name: 'prefix',
-  help: "If you, despite reading this have no clue what my prefix is, I'll tell you!",
+  help: 'If you, despite reading this have no clue what my prefix is, I\'ll tell you!',
   timeout: 5,
   level: 0,
   fn: function (msg) {
@@ -942,7 +969,6 @@ Commands.prefix = {
     })
   }
 }
-
 
 Commands.colorrole = {
   name: 'colorrole',
@@ -973,7 +999,9 @@ Commands.colorrole = {
       msg.channel.createMessage(`<@${msg.author.id}>, I do not have Manage Roles permission here, sorry!`)
       return
     }
-    var botRole = msg.channel.guild.members.get(bot.user.id).roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) { return a.position < b.position })[0]
+    var botRole = msg.channel.guild.members.get(bot.user.id).roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
+      return a.position < b.position
+    })[0]
     if (role.position >= botRole.position) {
       msg.channel.createMessage(`<@${msg.author.id}>, This role is higher or equal to my highest role, I cannot color it!`)
       return

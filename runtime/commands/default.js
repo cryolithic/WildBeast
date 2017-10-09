@@ -41,14 +41,14 @@ Commands.say = {
   level: 0,
   fn: function (msg, suffix) {
     if (!suffix) {
-      msg.channel.createMessage(`<@{msg.author.id}>, Cannot send an empty message, ya doof.`)
+      msg.channel.createMessage(`${msg.author.mention}, Cannot send an empty message, ya doof.`)
       return
     }
     var re = /(discord(\.gg|app\.com\/invite)\/([\w]{16}|([\w]+-?){3}))/
     if (msg.mentions.length >= 5) {
-      msg.reply('No more than five mentions at a time please.')
+      msg.channel.createMessage(`${msg.author.mention}, No more than five mentions at a time please.`)
     } else if (re.test(msg.content)) {
-      msg.reply('Lol no thanks, not sending that.')
+      msg.channel.createMessage(`${msg.author.mention}, Lol no thanks, not sending that.`)
     } else {
       msg.channel.createMessage('\u200B' + suffix.replace(/@everyone/, '@\u200Beveryone').replace(/@here/, '@\u200Bhere'))
     }
@@ -240,7 +240,7 @@ Commands.customize = {
     if (suffix[0].length === 0) {
       var datacontrol = require('../datacontrol')
       datacontrol.customize.getGuildData(msg.channel.guild).then(g => {
-        msg.channel.createMessage(`No option entered! Check ${g.customize.prefix !== false ? g.customize.prefix : config.settings.prefix}customize help to see the various options you can set.`)
+        msg.channel.createMessage(`No option entered! Check ${g.customize.prefix !== null ? g.customize.prefix : config.settings.prefix}customize help to see the various options you can set.`)
       })
     } else if (suffix[0] === 'help') {
       c.helpHandle(msg)

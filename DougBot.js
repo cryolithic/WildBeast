@@ -64,17 +64,23 @@ bot.on('messageCreate', msg => {
   if (!bot.ready) return
   datacontrol.users.isKnown(msg.author)
   var prefix
+  var guild = msg.channel.guild
   var loggingGuild = {}
-  for (var k in msg.channel.guild) {
-    loggingGuild[k] = msg.channel.guild[k]
-  }
-  loggingGuild.channels = []
-  loggingGuild.members = []
-  loggingGuild.roles = []
-  loggingGuild.emojis = []
-  loggingGuild.defaultChannel = []
-  loggingGuild.shard = []
-  loggingGuild.toString = 'no.'
+  loggingGuild.id = guild.id
+  loggingGuild.name = guild.name
+  loggingGuild.ownerID = guild.ownerID
+  loggingGuild.icon = guild.icon
+  loggingGuild.splash = guild.splash
+  loggingGuild.emojis = guild.emojis.length
+  loggingGuild.defaultNotifications = guild.defaultNotifications // Only because doug wants EVERYTHING. We have no realistic use for this.
+  loggingGuild.roles = guild.roles.size
+  loggingGuild.afkChannelID = guild.afkChannelID
+  loggingGuild.afkTimeout = guild.afkTimeout
+  loggingGuild.verificationLevel = guild.verificationLevel
+  loggingGuild.explicitContentFilter = guild.explicitContentFilter
+  loggingGuild.region = guild.region
+  loggingGuild.memberCount = guild.memberCount
+
   datacontrol.customize.getGuildData(msg.channel.guild).then(function (g) {
     if (!g.customize.prefix) {
       prefix = Config.settings.prefix

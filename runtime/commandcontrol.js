@@ -66,17 +66,17 @@ exports.helpHandle = function (msg, suffix) {
       'For further questions, join our server: discord.gg/wildbot',
       'Like what we do? Consider supporting my developer at Patreon! <https://www.patreon.com/Dougley>'
     ]
-    msg.author.openDM().then((y) => {
-      if (!msg.isPrivate) {
-        msg.channel.sendMessage('Help is underway ' + msg.author.mention + '!')
+    msg.author.getDMChannel().then((y) => {
+      if (!msg.author.guild) {
+        msg.channel.createMessage('Help is underway ' + msg.author.mention + '!')
       }
       for (var r in sorts) {
-        y.sendMessage(`\`\`\`ini\n${sorts[r].sort().join('\n')}\n\`\`\``) // FIXME: The entire commands array should sort instead of the sorts one
+        y.createMessage(`\`\`\`ini\n${sorts[r].sort().join('\n')}\n\`\`\``) // FIXME: The entire commands array should sort instead of the sorts one
       }
-      y.sendMessage(misc.join('\n'))
+      y.createMessage(misc.join('\n'))
     }).catch((e) => {
       Logger.error(e)
-      msg.channel.sendMessage('Well, this is awkward, something went wrong while trying to PM you. Do you have them enabled on this server?')
+      msg.channel.createMessage('Well, this is awkward, something went wrong while trying to PM you. Do you have them enabled on this server?')
     })
   } else if (suffix) {
     if (commands[suffix] || alias[suffix]) {
@@ -127,11 +127,11 @@ exports.helpHandle = function (msg, suffix) {
         }
         attributes.push(str)
       }
-      msg.author.openDM().then((y) => {
-        y.sendMessage(def.join('\n') + attributes.join('\n'))
+      msg.author.getDMChannel().then((y) => {
+        y.createMessage(def.join('\n') + attributes.join('\n'))
       })
     } else {
-      msg.channel.sendMessage(`There is no **${suffix}** command!`)
+      msg.channel.createMessage(`There is no **${suffix}** command!`)
     }
   }
 }

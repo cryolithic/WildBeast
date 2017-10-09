@@ -125,16 +125,27 @@ Commands.tag = {
           if (c === 0) {
             msg.channel.createMessage(`${msg.author.id === author.id ? "You don't" : 'This user does not'} have any tags!`)
           } else {
-            var tagsArray = []
+            var tagsArray = {
+              0: []
+            }
+            var counter = 0
             r.db('Discord').table('Tags').filter({owner: author.id}).run().then((tags) => {
               for (var i in tags) {
-                tagsArray.push(tags[i].id)
+                if (tagsArray[counter].join(', ').length > 1950) {
+                  counter++
+                  tagsArray[counter] = [`${tags[i].id}`]
+                } else {
+                  tagsArray[counter].push(tags[i].id)
+                }
               }
-              if (tagsArray.join(', ').length > 1950) {
-                msg.channel.createMessage(`The length of ${msg.author.id === author.id ? 'your' : "this user's"} tag list exceeds 2000 characters.`)
-                return
+              if (tagsArray[1]) {
+                msg.channel.createMessage(`Found ${tags.length} tags for **${author.username}**`)
+                Object.keys(tagsArray).forEach((collection) => {
+                  msg.channel.createMessage(tagsArray[collection].join(', '))
+                })
+              } else {
+                msg.channel.createMessage(`Found ${c} tags for **${author.username}**:\n${tagsArray[0].join(', ')}`)
               }
-              msg.channel.createMessage(`Found ${c} tags for **${author.username}**:\n${tagsArray.join(', ')}`)
             })
           }
         })

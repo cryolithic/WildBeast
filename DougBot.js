@@ -70,9 +70,7 @@ bot.on('messageCreate', msg => {
   loggingGuild.name = guild.name
   loggingGuild.ownerID = guild.ownerID
   loggingGuild.icon = guild.icon
-  loggingGuild.splash = guild.splash
-  loggingGuild.emojis = guild.emojis.length
-  loggingGuild.defaultNotifications = guild.defaultNotifications // Only because doug wants EVERYTHING. We have no realistic use for this.
+  loggingGuild.splash = guild.splash // Only because doug wants EVERYTHING. We have no realistic use for most of this.
   loggingGuild.roles = guild.roles.size
   loggingGuild.afkChannelID = guild.afkChannelID
   loggingGuild.afkTimeout = guild.afkTimeout
@@ -117,7 +115,8 @@ bot.on('messageCreate', msg => {
         authorID: msg.author.id,
         guild: loggingGuild,
         botID: bot.user.id,
-        cmd: cmd
+        cmd: cmd,
+        shard: guild.shard.id
       })
       if (commands[cmd].level === 'master') {
         if (Config.permissions.master.indexOf(msg.author.id) > -1) {

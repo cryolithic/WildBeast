@@ -20,6 +20,7 @@ var timeout = runtime.internal.timeouts
 var commands = runtime.commandcontrol.Commands
 var aliases = runtime.commandcontrol.Aliases
 var datacontrol = runtime.datacontrol
+const {PlayerManager} = require('eris-lavalink')
 
 Logger.info('Initializing...')
 
@@ -38,7 +39,7 @@ if (argv.shardmode && !isNaN(argv.firstShard) && !isNaN(argv.lastShard)) {
 var bugsnag = require('bugsnag')
 bugsnag.register(Config.api_keys.bugsnag)
 
-bot.on('ready', () => {
+bot.once('ready', () => {
   runtime.internal.versioncheck.versionCheck(function (err, res) {
     if (err) {
       Logger.error('Version check failed, ' + err)
@@ -55,13 +56,21 @@ bot.on('ready', () => {
     console.log('o okei bai')
     process.exit(0)
   }
+
+  if (!(bot.voiceConnections instanceof PlayerManager)) {
+    bot.voiceConnections = new PlayerManager(bot, Config.musicNodes, {
+      numShards: bot.shards.size,
+      userId: bot.user.id,
+      defaultRegion: 'eu'
+    })
+  }
 })
 
 bot.on('messageCreate', msg => {
+  if (!bot.ready) return
   if (msg.author.bot || msg.author.id === bot.user.id) {
     return
   }
-  if (!bot.ready) return
   datacontrol.users.isKnown(msg.author)
   var prefix
   var guild = msg.channel.guild
@@ -80,7 +89,7 @@ bot.on('messageCreate', msg => {
   loggingGuild.memberCount = guild.memberCount
 
   datacontrol.customize.getGuildData(msg.channel.guild).then(function (g) {
-    if (!g.customize.prefix) {
+    if (g.customize.prefix === null) {
       prefix = Config.settings.prefix
     } else {
       prefix = g.customize.prefix
@@ -96,8 +105,8 @@ bot.on('messageCreate', msg => {
       suffix = msg.content.substr(bot.user.mention.length).split(' ')
       suffix = suffix.slice(2, suffix.length).join(' ')
     } else if (msg.content.startsWith(`<@!${bot.user.id}>`)) {
-      cmd = msg.content.substr(bot.user.nickMention.length + 1).split(' ')[0].toLowerCase()
-      suffix = msg.content.substr(bot.user.nickMention.length).split(' ')
+      cmd = msg.content.substr(`<@!${bot.user.id}>`.length + 1).split(' ')[0].toLowerCase()
+      suffix = msg.content.substr(`<@!${bot.user.id}>`.length).split(' ')
       suffix = suffix.slice(2, suffix.length).join(' ')
     }
     if (cmd === 'help') {
@@ -108,7 +117,7 @@ bot.on('messageCreate', msg => {
     }
     if (commands[cmd]) {
       if (typeof commands[cmd] !== 'object') {
-        return // ignore JS build-in array functions
+        return // ignore JS built-in array functions
       }
       Logger.info(`Executing <${msg.cleanContent}> from ${msg.author.username}`, {
         author: msg.author.username,
@@ -125,10 +134,12 @@ bot.on('messageCreate', msg => {
           } catch (e) {
             bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
             Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-              author: msg.author,
+              author: msg.author.username,
+              authorID: msg.author.id,
               guild: loggingGuild,
               botID: bot.user.id,
               cmd: cmd,
+              shard: guild.shard.id,
               error: e
             })
           }
@@ -153,10 +164,12 @@ bot.on('messageCreate', msg => {
                     } catch (e) {
                       bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
                       Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-                        author: msg.author,
+                        author: msg.author.username,
+                        authorID: msg.author.id,
                         guild: loggingGuild,
                         botID: bot.user.id,
                         cmd: cmd,
+                        shard: guild.shard.id,
                         error: e
                       })
                     }
@@ -167,10 +180,12 @@ bot.on('messageCreate', msg => {
                       } catch (e) {
                         bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
                         Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-                          author: msg.author,
+                          author: msg.author.username,
+                          authorID: msg.author.id,
                           guild: loggingGuild,
-                          botID: bot.User.id,
+                          botID: bot.user.id,
                           cmd: cmd,
+                          shard: guild.shard.id,
                           error: e
                         })
                       }
@@ -197,10 +212,12 @@ bot.on('messageCreate', msg => {
           }
         }).catch(function (e) {
           Logger.error('Permission error: ' + e, {
-            author: msg.author,
+            author: msg.author.username,
+            authorID: msg.author.id,
             guild: loggingGuild,
             botID: bot.user.id,
             cmd: cmd,
+            shard: guild.shard.id,
             error: e
           })
         })
@@ -225,10 +242,12 @@ bot.on('messageCreate', msg => {
             }
           }).catch(function (e) {
             Logger.error('Permission error: ' + e, {
-              author: msg.author,
+              author: msg.author.username,
+              authorID: msg.author.id,
               guild: loggingGuild,
               botID: bot.user.id,
               cmd: cmd,
+              shard: guild.shard.id,
               error: e
             })
           })
@@ -241,14 +260,18 @@ bot.on('messageCreate', msg => {
       process.exit(1)
     } else {
       Logger.error('Prefix error: ' + e, {
-        author: msg.author,
+        author: msg.author.username,
+        authorID: msg.author.id,
         guild: loggingGuild,
         botID: bot.user.id,
+        cmd: cmd,
+        shard: guild.shard.id,
         error: e
       })
     }
   })
 })
+
 /* This will remain commented out due to customize needing a welcomechannel method
 bot.Dispatcher.on(Event.GUILD_MEMBER_ADD, function (s) {
   datacontrol.permissions.isKnown(s.guild)

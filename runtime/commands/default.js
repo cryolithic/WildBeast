@@ -961,7 +961,7 @@ Commands.prefix = {
   level: 0,
   fn: function (msg) {
     var datacontrol = require('../datacontrol')
-    datacontrol.customize.getGuildData(msg).then(g => {
+    datacontrol.customize.getGuildData(msg.channel.guild).then(g => {
       msg.channel.createMessage(`My prefix on this server is ${g.customize.prefix !== null ? g.customize.prefix : config.settings.prefix}`)
     }).catch((error) => {
       Logger.error(error)

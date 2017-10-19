@@ -325,20 +325,19 @@ function getPlayer (bot, channel) {
   return bot.voiceConnections.join(channel.guild.id, channel.id, options)
 }
 
-async function resolveTracks (node, search) {
-  try {
-    var result = await superagent.get(`http://${node.host}:2333/loadtracks?identifier=${search}`)
+function resolveTracks (node, search) {
+  return new Promise((resolve, reject) => {
+    superagent.get(`http://${node.host}:2333/loadtracks?identifier=${search}`)
       .set('Authorization', node.password)
       .set('Accept', 'application/json')
-  } catch (err) {
-    throw err
-  }
-
-  if (!result) {
-    throw 'Unable play that video.'
-  }
-
-  return result.body // array of tracks resolved from lavalink
+      .end((err, res) => {
+        if (err) {
+          return reject(err)
+        } else {
+          return resolve(res.body)
+        }
+      })
+  })
 }
 
 function safeLoop (msg, bot, tracks) {

@@ -3,46 +3,63 @@ let config = require('../../config.json')
 let info = {}
 var superagent = require('superagent')
 var url = require('url')
+let reactions = {
+  '1⃣': 0,
+  '2⃣': 1,
+  '3⃣': 2,
+  '4⃣': 3,
+  '5⃣': 4,
+  '❌': 'cancel'
+}
+
+// TODO: Proper error messages everyone and finish adding whatever's not added.
+// TODO: Something to track how many voice connections are active, Bezerk?
 
 exports.join = function (msg, suffix, bot) {
-  if (msg.channel.guild.channels.filter(c => c.type === 2).length === 0) {
-    msg.channel.createMessage(`${msg.author.mention}, sorry pal but there are no voice channels I can join.`)
-  } else {
-    let voiceChan = msg.channel.guild.channels.find(c => c.id === msg.channel.guild.members.find(m => m.id === msg.author.id).voiceState.channelID)
-    if (!voiceChan) {
-      msg.channel.createMessage(`${msg.author.mention}, join a voice channel before using this command again.`)
+  // TODO: Make a function that creates the join message so we don't have a hundred line export.
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    if (msg.channel.guild.channels.filter(c => c.type === 2).length === 0) {
+      msg.channel.createMessage(`${msg.author.mention}, sorry pal but there are no voice channels I can join.`)
     } else {
-      if (suffix) {
-        if (url.parse(suffix).host === null) {
-          resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
-            if (tracks.length === 0) {
-              msg.channel.createMessage(`No tracks found.`)
-            } else {
-              getPlayer(bot, voiceChan).then(() => {
-                msg.channel.createMessage(`join message goes here`)
-                makeGuildInfo(msg, bot, voiceChan, tracks[0])
-              })
-            }
-          })
+      let voiceChan = msg.channel.guild.channels.find(c => c.id === msg.channel.guild.members.find(m => m.id === msg.author.id).voiceState.channelID)
+      if (!voiceChan) {
+        msg.channel.createMessage(`${msg.author.mention}, join a voice channel before using this command again.`)
+      } else {
+        if (suffix) {
+          if (url.parse(suffix).host === null) {
+            resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
+              if (tracks.length === 0) {
+                msg.channel.createMessage(`No tracks found.`)
+              } else {
+                getPlayer(bot, voiceChan).then(() => {
+                  msg.channel.createMessage(`join message goes here`)
+                  makeGuildInfo(msg, bot, voiceChan, [tracks[0]])
+                })
+              }
+            })
+          } else {
+            resolveTracks(config.musicNodes[0], suffix).then(tracks => {
+              if (tracks.length === 0) {
+                msg.channel.createMessage(`No tracks found.`)
+              } else {
+                getPlayer(bot, voiceChan).then(() => {
+                  msg.channel.createMessage(`join message goes here`)
+                  makeGuildInfo(msg, bot, voiceChan, tracks)
+                })
+              }
+            })
+          }
         } else {
-          resolveTracks(config.musicNodes[0], suffix).then(tracks => {
-            if (tracks.length === 0) {
-              msg.channel.createMessage(`No tracks found.`)
-            } else {
-              getPlayer(bot, voiceChan).then(() => {
-                msg.channel.createMessage(`join message goes here`)
-                makeGuildInfo(msg, bot, voiceChan, tracks)
-              })
-            }
+          getPlayer(bot, voiceChan).then(() => {
+            msg.channel.createMessage(`join message goes here`)
+            makeGuildInfo(msg, bot, voiceChan)
           })
         }
-      } else {
-        getPlayer(bot, voiceChan).then(() => {
-          msg.channel.createMessage(`join message goes here`)
-          makeGuildInfo(msg, bot, voiceChan)
-        })
       }
     }
+  } else {
+    msg.channel.createMessage(`${msg.author.mention}, I am already streaming in this guild.`)
   }
 }
 
@@ -57,6 +74,27 @@ exports.leave = function (msg, suffix, bot) {
     }).catch(err => {
       console.log(err)
     })
+  }
+}
+
+exports.volume = function(msg, suffix, bot) {
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
+  } else {
+    if (!suffix) {
+      msg.channel.createMessage(`${msg.author.mention}, the volume is currently ${info[msg.channel.guild.id].volume !== undefined ? info[msg.channel.guild.id].volume : '100'}`)
+    } else if(isNaN(suffix)) {
+      msg.channel.createMessage(`${msg.author.mention}, use a number between 0-100`)
+    } else {
+      getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
+        player.setVolume(suffix)
+        info[msg.channel.guild.id].volume = suffix
+        msg.channel.createMessage(`${msg.author.mention}, the volume is now set to ${suffix}`)
+      }).catch(err => {
+        console.log(err)
+      })
+    }
   }
 }
 
@@ -158,25 +196,41 @@ exports.testreq = function (msg, suffix, bot) {
 }
 
 exports.search = function (msg, suffix, bot) {
+  // TODO: Make the reaction event a function for cleaner code also add voice check.
   resolveTracks(config.musicNodes[0], `ytsearch:${suffix}`).then(tracks => {
     if (tracks.length === 0) {
       msg.channel.createMessage('no tracks lul')
     } else {
       let titles = tracks.slice(0, 5).map((t, index) => `${index + 1}: ${t.info.title}`)
-      msg.channel.createMessage(`${titles.join('\n')}\nPlease pick one using 1-5 or say cancel`).then(ms => {
-        bot.on('messageCreate', function pick (m) {
-          if (m.author.id === msg.author.id && m.channel.id === msg.channel.id) {
-            if (!isNaN(m.content)) {
-              ms.edit(`You picked ${titles[m.content - 1]} to play`)
-              addTracks(msg, bot, tracks[m.content - 1])
-              bot.removeListener('messageCreate', pick)
-            } else if (m.content.toLowerCase() === 'cancel') {
-              ms.edit(`Cancelling request.`)
-              bot.removeListener('messageCreate', pick)
+      msg.channel.createMessage(`${titles.join('\n')}\nPlease pick one using 1-5 or use :x: to cancel`).then(ms => {
+        ms.addReaction('1⃣').catch(err => {console.log(err)})
+        ms.addReaction('2⃣').catch(err => {console.log(err)})
+        ms.addReaction('3⃣').catch(err => {console.log(err)})
+        ms.addReaction('4⃣').catch(err => {console.log(err)})
+        ms.addReaction('5⃣').catch(err => {console.log(err)})
+        ms.addReaction('❌').then(() => {
+          bot.on('messageReactionAdd', function pick (m, emoji, user) {
+            if (m.channel.id === msg.channel.id && user === msg.author.id) {
+              if (reactions[emoji.name] !== 'cancel') {
+                ms.edit(`You picked ${titles[reactions[emoji.name]]} to play`).then(() => {
+                  setTimeout(() => {
+                    ms.delete()
+                  }, 5000)
+                })
+                addTracks(msg, bot, [tracks[reactions[emoji.name]]])
+                bot.removeListener('messageReactionAdd', pick)
+              } else if (reactions[emoji.name] === 'cancel') {
+                ms.edit(`Cancelling request.`).then(() => {
+                  setTimeout(() => {
+                    ms.delete()
+                  }, 3000)
+                })
+                bot.removeListener('messageReactionAdd', pick)
+              }
             }
-          }
-        })
-      })
+          })
+        }, 3000)
+      }).catch(console.log)
     }
   }).catch(err => {
     console.log(err)
@@ -184,23 +238,25 @@ exports.search = function (msg, suffix, bot) {
 }
 
 exports.request = function (msg, suffix, bot) {
+  // TODO: Move the voice check here.
   if (url.parse(suffix).host === null) {
     resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
       if (tracks.length === 0) {
         msg.channel.createMessage(`${msg.author.mention}, sorry but i could not find any tracks with those keywords`)
       } else {
-        addTracks(msg, bot, tracks[0])
+        addTracks(msg, bot, [tracks[0]])
       }
     }).catch(err => {
       console.error(err)
     })
   } else {
+    // TODO: Maybe fix youtube watch?v=ID&list=smth or throw an error, probably throw.
     resolveTracks(config.musicNodes[0], suffix).then(tracks => {
       if (tracks.length === 0) {
         msg.channel.createMessage(`${msg.author.mention}, sorry but i could not fetch that`)
       } else {
         if (tracks.length === 1) {
-          addTracks(msg, bot, tracks[0])
+          addTracks(msg, bot, [tracks[0]])
         } else {
           addTracks(msg, bot, tracks)
         }

@@ -1,7 +1,7 @@
 {
   "bot": {
-    "token": "Bot token",
-    "oauth": "Bot OAuth URL, see wiki"
+    "token": "Someday I'll leak the token again",
+    "oauth": "There aint one haha get lost."
   },
   "database": {
     "host": "localhost",
@@ -10,13 +10,16 @@
     "user": "admin"
   },
   "settings": {
-    "prefix": "anything can be entered as the global prefix, refer to installation guide",
+    "prefix": "prefix",
     "autodeletemsg": true,
     "deleteTimeout": 3000,
     "deleteTimeoutLong": 6000,
     "maxvcslots": 10,
-    "leaveAfterEndOfPlaylist": true
+    "leaveAfterPlaylistEnd": false
   },
+  "musicNodes" : [
+    {"host": "127.0.0.1", "port": 9090, "password": "password"}
+  ],
   "bezerk": {
     "use": false,
     "uri": "ws://localhost:1337"
@@ -28,21 +31,19 @@
     }
   },
   "permissions": {
-    "master": ["you need to enter the ID from the user you want as master here", "you can extend this array like this if you need more"],
+    "master": ["you know how this goes"],
     "level1": [],
     "level2": [],
     "level3": []
   },
   "api_keys": {
     "imgflip": {
-      "username": "Imgflip username",
-      "password": "imgflip password"
+      "username": "",
+      "password": ""
     },
-    "google": "A google key",
+    "google": "",
     "twitchId": "A twitch Client-ID",
     "bugsnag": "A Bugsnag api key, Bugsnag tracker users only",
-    "imgur": "A Imgur Client-ID",
-    "cleverbot_user": "",
-    "cleverbot_key": ""
+    "imgur": "A Imgur Client-ID"
   }
 }

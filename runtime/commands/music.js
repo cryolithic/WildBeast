@@ -11,12 +11,7 @@ Commands.voice = {
   timeout: 10,
   level: 1,
   fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
       v.join(msg, suffix, bot)
-    } else {
-      msg.channel.createMessage(`${msg.author.mention} I am already streaming in this guild.`)
-    }
   }
 }
 
@@ -26,12 +21,7 @@ Commands['leave-voice'] = {
   noDM: true,
   level: 1,
   fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
-      msg.channel.createMessage(`${msg.author.mention} I am not streaming in this guild.`)
-    } else {
       v.leave(msg, suffix, bot)
-    }
   }
 }
 
@@ -43,11 +33,7 @@ Commands.volume = {
   noDM: true,
   level: 1,
   fn: function (msg, suffix, bot) {
-    v.volume(msg, suffix, bot).then(v => {
-      msg.channel.createMessage(v)
-    }).catch(err => {
-      msg.channel.createMessage(err)
-    })
+    v.volume(msg, suffix, bot)
   }
 }
 
@@ -58,6 +44,7 @@ Commands.music = {
   noDM: true,
   level: 1,
   fn: function (msg, suffix, bot) {
+    // TODO: Change this for two commands, resume and pause.
     v.music(msg, suffix, bot)
   }
 }
@@ -83,6 +70,7 @@ Commands.voteskip = {
   noDM: true,
   level: 1,
   fn: function (msg, suffix, bot) {
+    // TODO: Logic and add it in, good logic too please.
     v.voteSkip(msg, bot)
   }
 }
@@ -93,6 +81,7 @@ Commands.shuffle = {
   noDM: true,
   level: 2,
   fn: function (msg, suffix, bot) {
+    // TODO: The logic for this is in WildBeats.
     v.shuffle(msg, bot)
   }
 }
@@ -109,6 +98,7 @@ Commands.playlist = {
     suffix = suffix.toLowerCase().split(' ')
     let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
     if (chan) {
+      // TODO: Add a way to manage the playlist, better than the last stuff?
       if (suffix[0] !== undefined && ['clear', 'delete', 'remove'].indexOf(suffix[0]) > -1) {
         checkLevel(msg, msg.author.id, msg.member.roles).then(x => {
           if (x >= 1) {
@@ -181,6 +171,7 @@ Commands.plreq = {
   timeout: 10,
   level: 1,
   fn: function (msg, suffix, bot) {
+    // TODO: Remove test command.
     v.plreq(msg, suffix, bot)
   }
 }
@@ -193,6 +184,7 @@ Commands.testreq = {
   timeout: 10,
   level: 1,
   fn: function (msg, suffix, bot) {
+    // TODO: Remove test command.
     v.testreq(msg, suffix, bot)
   }
 }

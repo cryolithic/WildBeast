@@ -1,8 +1,9 @@
 'use strict'
 let config = require('../../config.json')
 let info = {}
-var superagent = require('superagent')
-var url = require('url')
+let superagent = require('superagent')
+let url = require('url')
+let customize = require('../databases/controllers/customize.js')
 let reactions = {
   '1⃣': 0,
   '2⃣': 1,
@@ -26,6 +27,9 @@ exports.join = function (msg, suffix, bot) {
       if (!voiceChan) {
         msg.channel.createMessage(`${msg.author.mention}, join a voice channel before using this command again.`)
       } else {
+        customize.getGuildData(msg.channel.guild).then(g => {
+          console.log(g.customize.prefix)
+        })
         if (suffix) {
           if (url.parse(suffix).host === null) {
             resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
@@ -77,14 +81,14 @@ exports.leave = function (msg, suffix, bot) {
   }
 }
 
-exports.volume = function(msg, suffix, bot) {
+exports.volume = function (msg, suffix, bot) {
   let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
   if (!chan) {
     msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
   } else {
     if (!suffix) {
       msg.channel.createMessage(`${msg.author.mention}, the volume is currently ${info[msg.channel.guild.id].volume !== undefined ? info[msg.channel.guild.id].volume : '100'}`)
-    } else if(isNaN(suffix)) {
+    } else if (isNaN(suffix)) {
       msg.channel.createMessage(`${msg.author.mention}, use a number between 0-100`)
     } else {
       getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
@@ -99,58 +103,57 @@ exports.volume = function(msg, suffix, bot) {
 }
 
 exports.skip = function (msg, bot) {
-  if (info[msg.channel.guild.id].track.length <= 1) {
-    if (config.settings.leaveAfterPlaylistEnd) {
-      getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
-        player.stop()
-        player.disconnect()
-        delete info[msg.channel.guild.id]
-        info[msg.channel.guild.id] = undefined
-      })
-      msg.channel.createMessage(`The playlist has ended, leaving voice.`)
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    msg.channel.createMessage(`${msg.author.mention} I am not streaming in this guild.`)
+  } else {
+    if (info[msg.channel.guild.id].track.length <= 1) {
+      if (config.settings.leaveAfterPlaylistEnd) {
+        getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
+          player.stop()
+          player.disconnect()
+          delete info[msg.channel.guild.id]
+          info[msg.channel.guild.id] = undefined
+        })
+        msg.channel.createMessage(`The playlist has ended, leaving voice.`)
+      } else {
+        info[msg.channel.guild.id].track = []
+        info[msg.channel.guild.id].title = []
+        info[msg.channel.guild.id].length = []
+        info[msg.channel.guild.id].requester = []
+        info[msg.channel.guild.id].skips = {count: 0, users: []}
+        getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
+          player.stop()
+        })
+        msg.channel.createMessage(`The playlist has ended, add more tracks with request.`)
+      }
     } else {
-      info[msg.channel.guild.id].track = []
-      info[msg.channel.guild.id].title = []
-      info[msg.channel.guild.id].length = []
-      info[msg.channel.guild.id].requester = []
+      info[msg.channel.guild.id].track.shift()
+      info[msg.channel.guild.id].title.shift()
+      info[msg.channel.guild.id].length.shift()
+      info[msg.channel.guild.id].requester.shift()
       info[msg.channel.guild.id].skips = {count: 0, users: []}
       getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
-        player.stop()
+        if (player.playing) {
+          player.stop()
+        }
       })
-      msg.channel.createMessage(`The playlist has ended, add more tracks with request.`)
+      play(msg, bot)
     }
-  } else {
-    info[msg.channel.guild.id].track.shift()
-    info[msg.channel.guild.id].title.shift()
-    info[msg.channel.guild.id].length.shift()
-    info[msg.channel.guild.id].requester.shift()
-    info[msg.channel.guild.id].skips = {count: 0, users: []}
-    getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
-      if (player.playing) {
-        player.stop()
-      }
-    })
-    play(msg, bot)
   }
 }
 
 exports.time = function (msg, bot) {
-  getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
-    if (player.playing) {
-      let user = msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]) !== null ? msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).nick !== null ? msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).nick : msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).user.username : info[msg.channel.guild.id].requester[0]
-      msg.channel.createMessage(`**Current song:** _${info[msg.channel.guild.id].title[0]}_\n**Requested by:** _${user}_\n:arrow_forward: ${progressBar(Math.round((player.getTimestamp() / info[msg.channel.guild.id].length[0]) * 8))} **[${hhMMss(player.getTimestamp() / 1000)}/${hhMMss(info[msg.channel.guild.id].length[0] / 1000)}]**`)
-    }
-  })
-
-  function progressBar (percent) {
-    let str = ''
-    for (let i = 0; i < 8; i++) {
-      if (i === percent)
-        str += '\uD83D\uDD18'
-      else
-        str += '▬'
-    }
-    return str
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    msg.channel.createMessage(`${msg.author.mention} I am not streaming in this guild.`)
+  } else {
+    getPlayer(bot, info[msg.channel.guild.id].channel).then(player => {
+      if (player.playing) {
+        let user = msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]) !== null ? msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).nick !== null ? msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).nick : msg.channel.guild.members.get(info[msg.channel.guild.id].requester[0]).user.username : info[msg.channel.guild.id].requester[0]
+        msg.channel.createMessage(`**Current song:** _${info[msg.channel.guild.id].title[0]}_\n**Requested by:** _${user}_\n:arrow_forward: ${progressBar(Math.round((player.getTimestamp() / info[msg.channel.guild.id].length[0]) * 9))} **[${hhMMss(player.getTimestamp() / 1000)}/${hhMMss(info[msg.channel.guild.id].length[0] / 1000)}]**`)
+      }
+    })
   }
 }
 
@@ -196,74 +199,98 @@ exports.testreq = function (msg, suffix, bot) {
 }
 
 exports.search = function (msg, suffix, bot) {
-  // TODO: Make the reaction event a function for cleaner code also add voice check.
-  resolveTracks(config.musicNodes[0], `ytsearch:${suffix}`).then(tracks => {
-    if (tracks.length === 0) {
-      msg.channel.createMessage('no tracks lul')
-    } else {
-      let titles = tracks.slice(0, 5).map((t, index) => `${index + 1}: ${t.info.title}`)
-      msg.channel.createMessage(`${titles.join('\n')}\nPlease pick one using 1-5 or use :x: to cancel`).then(ms => {
-        ms.addReaction('1⃣').catch(err => {console.log(err)})
-        ms.addReaction('2⃣').catch(err => {console.log(err)})
-        ms.addReaction('3⃣').catch(err => {console.log(err)})
-        ms.addReaction('4⃣').catch(err => {console.log(err)})
-        ms.addReaction('5⃣').catch(err => {console.log(err)})
-        ms.addReaction('❌').then(() => {
-          bot.on('messageReactionAdd', function pick (m, emoji, user) {
-            if (m.channel.id === msg.channel.id && user === msg.author.id) {
-              if (reactions[emoji.name] !== 'cancel') {
-                ms.edit(`You picked ${titles[reactions[emoji.name]]} to play`).then(() => {
-                  setTimeout(() => {
-                    ms.delete()
-                  }, 5000)
-                })
-                addTracks(msg, bot, [tracks[reactions[emoji.name]]])
-                bot.removeListener('messageReactionAdd', pick)
-              } else if (reactions[emoji.name] === 'cancel') {
-                ms.edit(`Cancelling request.`).then(() => {
-                  setTimeout(() => {
-                    ms.delete()
-                  }, 3000)
-                })
-                bot.removeListener('messageReactionAdd', pick)
-              }
-            }
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
+  } else if (!suffix) {
+    msg.channel.createMessage(`<@${msg.author.id}>, Please enter something to search for!`)
+  } else {
+    // TODO: Make the reaction event a function for cleaner code also add voice check.
+    resolveTracks(config.musicNodes[0], `ytsearch:${suffix}`).then(tracks => {
+      if (tracks.length === 0) {
+        msg.channel.createMessage('no tracks lul')
+      } else {
+        let titles = tracks.slice(0, 5).map((t, index) => `${index + 1}: ${t.info.title}`)
+        msg.channel.createMessage(`${titles.join('\n')}\nPlease pick one using 1-5 or use :x: to cancel`).then(ms => {
+          ms.addReaction('1⃣').catch(err => {
+            console.log(err)
           })
-        }, 3000)
-      }).catch(console.log)
-    }
-  }).catch(err => {
-    console.log(err)
-  })
+          ms.addReaction('2⃣').catch(err => {
+            console.log(err)
+          })
+          ms.addReaction('3⃣').catch(err => {
+            console.log(err)
+          })
+          ms.addReaction('4⃣').catch(err => {
+            console.log(err)
+          })
+          ms.addReaction('5⃣').catch(err => {
+            console.log(err)
+          })
+          ms.addReaction('❌').then(() => {
+            bot.on('messageReactionAdd', function pick (m, emoji, user) {
+              if (m.channel.id === msg.channel.id && user === msg.author.id) {
+                if (reactions[emoji.name] !== 'cancel') {
+                  ms.edit(`You picked ${titles[reactions[emoji.name]]} to play`).then(() => {
+                    setTimeout(() => {
+                      ms.delete()
+                    }, 5000)
+                  })
+                  addTracks(msg, bot, [tracks[reactions[emoji.name]]])
+                  bot.removeListener('messageReactionAdd', pick)
+                } else if (reactions[emoji.name] === 'cancel') {
+                  ms.edit(`Cancelling request.`).then(() => {
+                    setTimeout(() => {
+                      ms.delete()
+                    }, 3000)
+                  })
+                  bot.removeListener('messageReactionAdd', pick)
+                }
+              }
+            })
+          }, 3000)
+        }).catch(console.log)
+      }
+    }).catch(err => {
+      console.log(err)
+    })
+  }
 }
 
 exports.request = function (msg, suffix, bot) {
-  // TODO: Move the voice check here.
-  if (url.parse(suffix).host === null) {
-    resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
-      if (tracks.length === 0) {
-        msg.channel.createMessage(`${msg.author.mention}, sorry but i could not find any tracks with those keywords`)
-      } else {
-        addTracks(msg, bot, [tracks[0]])
-      }
-    }).catch(err => {
-      console.error(err)
-    })
+  let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
+  if (!chan) {
+    msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
+  } else if (!suffix) {
+    msg.channel.createMessage(`<@${msg.author.id}>, Please enter something to search for!`)
   } else {
-    // TODO: Maybe fix youtube watch?v=ID&list=smth or throw an error, probably throw.
-    resolveTracks(config.musicNodes[0], suffix).then(tracks => {
-      if (tracks.length === 0) {
-        msg.channel.createMessage(`${msg.author.mention}, sorry but i could not fetch that`)
-      } else {
-        if (tracks.length === 1) {
-          addTracks(msg, bot, [tracks[0]])
+    // TODO: Move the voice check here.
+    if (url.parse(suffix).host === null) {
+      resolveTracks(config.musicNodes[0], `ytsearch:${encodeURI(suffix)}`).then(tracks => {
+        if (tracks.length === 0) {
+          msg.channel.createMessage(`${msg.author.mention}, sorry but i could not find any tracks with those keywords`)
         } else {
-          addTracks(msg, bot, tracks)
+          addTracks(msg, bot, [tracks[0]])
         }
-      }
-    }).catch(err => {
-      console.error(err)
-    })
+      }).catch(err => {
+        console.error(err)
+      })
+    } else {
+      // TODO: Maybe fix youtube watch?v=ID&list=smth or throw an error, probably throw.
+      resolveTracks(config.musicNodes[0], suffix).then(tracks => {
+        if (tracks.length === 0) {
+          msg.channel.createMessage(`${msg.author.mention}, sorry but i could not fetch that`)
+        } else {
+          if (tracks.length === 1) {
+            addTracks(msg, bot, [tracks[0]])
+          } else {
+            addTracks(msg, bot, tracks)
+          }
+        }
+      }).catch(err => {
+        console.error(err)
+      })
+    }
   }
 }
 
@@ -433,4 +460,15 @@ function hhMMss (time) {
   } else {
     return '00:00:00'
   }
+}
+
+function progressBar (percent) {
+  let str = ''
+  for (let i = 0; i < 9; i++) {
+    if (i === percent)
+      str += '\uD83D\uDD18'
+    else
+      str += '▬'
+  }
+  return str
 }

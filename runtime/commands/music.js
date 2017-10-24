@@ -11,7 +11,7 @@ Commands.voice = {
   timeout: 10,
   level: 1,
   fn: function (msg, suffix, bot) {
-      v.join(msg, suffix, bot)
+    v.join(msg, suffix, bot)
   }
 }
 
@@ -21,7 +21,7 @@ Commands['leave-voice'] = {
   noDM: true,
   level: 1,
   fn: function (msg, suffix, bot) {
-      v.leave(msg, suffix, bot)
+    v.leave(msg, suffix, bot)
   }
 }
 
@@ -55,12 +55,7 @@ Commands.skip = {
   noDM: true,
   level: 2,
   fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
-      msg.channel.createMessage(`${msg.author.mention} I am not streaming in this guild.`)
-    } else {
-      v.skip(msg, bot)
-    }
+    v.skip(msg, bot)
   }
 }
 
@@ -154,12 +149,32 @@ Commands.time = {
   timeout: 10,
   level: 1,
   fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
-      msg.channel.createMessage(`${msg.author.mention} I am not streaming in this guild.`)
-    } else {
-      v.time(msg, bot)
-    }
+    v.time(msg, bot)
+  }
+}
+
+Commands.search = {
+  name: 'search',
+  help: 'Use this to search for songs on youtube',
+  noDM: true,
+  usage: 'keywords to search youtube',
+  timeout: 10,
+  level: 1,
+  fn: function (msg, suffix, bot) {
+    v.search(msg, suffix, bot)
+  }
+}
+
+Commands.request = {
+  name: 'request',
+  help: 'Use this to request songs!',
+  aliases: ['queue'],
+  noDM: true,
+  usage: 'link or keywords to search youtube',
+  timeout: 10,
+  level: 1,
+  fn: function (msg, suffix, bot) {
+    v.request(msg, suffix, bot)
   }
 }
 
@@ -186,45 +201,6 @@ Commands.testreq = {
   fn: function (msg, suffix, bot) {
     // TODO: Remove test command.
     v.testreq(msg, suffix, bot)
-  }
-}
-
-Commands.search = {
-  name: 'search',
-  help: 'Use this to search for songs on youtube',
-  noDM: true,
-  usage: 'keywords to search youtube',
-  timeout: 10,
-  level: 1,
-  fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
-      msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
-    } else if (!suffix) {
-      msg.channel.createMessage(`<@${msg.author.id}>, Please enter something to search for!`)
-    } else {
-      v.search(msg, suffix, bot)
-    }
-  }
-}
-
-Commands.request = {
-  name: 'request',
-  help: 'Use this to request songs!',
-  aliases: ['queue'],
-  noDM: true,
-  usage: 'link or keywords to search youtube',
-  timeout: 10,
-  level: 1,
-  fn: function (msg, suffix, bot) {
-    let chan = bot.voiceConnections.find(vc => vc.guildId === msg.channel.guild.id)
-    if (!chan) {
-      msg.channel.createMessage(`${msg.author.mention}, sorry but i am not in voice.`)
-    } else if (!suffix) {
-      msg.channel.createMessage(`<@${msg.author.id}>, Please enter something to search for!`)
-    } else {
-      v.request(msg, suffix, bot)
-    }
   }
 }
 

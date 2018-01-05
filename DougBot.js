@@ -24,10 +24,11 @@ const {PlayerManager} = require('eris-lavalink')
 
 Logger.info('Initializing...')
 
-if (argv.shardmode && !isNaN(argv.firstShard) && !isNaN(argv.lastShard)) {
+if (argv.shardmode && !isNaN(argv.maxShards) && !isNaN(argv.firstShard) && !isNaN(argv.lastShard)) {
   Logger.info('Starting in ShardMode')
   bot = new Eris(Config.bot.token, {
     getAllUsers: true,
+    maxShards: argv.maxShards,
     firstShardID: argv.firstShard,
     lastShardID: argv.lastShard,
     restMode: true
@@ -35,9 +36,6 @@ if (argv.shardmode && !isNaN(argv.firstShard) && !isNaN(argv.lastShard)) {
 } else {
   bot = new Eris(Config.bot.token, {getAllUsers: true, restMode: true})
 }
-
-var bugsnag = require('bugsnag')
-bugsnag.register(Config.api_keys.bugsnag)
 
 bot.once('ready', () => {
   runtime.internal.versioncheck.versionCheck(function (err, res) {
@@ -72,109 +70,92 @@ bot.on('messageCreate', msg => {
     return
   }
   datacontrol.users.isKnown(msg.author)
-  var prefix
-  var guild = msg.channel.guild
-  var loggingGuild = {}
-  loggingGuild.id = guild.id
-  loggingGuild.name = guild.name
-  loggingGuild.ownerID = guild.ownerID
-  loggingGuild.icon = guild.icon
-  loggingGuild.splash = guild.splash // Only because doug wants EVERYTHING. We have no realistic use for most of this.
-  loggingGuild.roles = guild.roles.size
-  loggingGuild.afkChannelID = guild.afkChannelID
-  loggingGuild.afkTimeout = guild.afkTimeout
-  loggingGuild.verificationLevel = guild.verificationLevel
-  loggingGuild.explicitContentFilter = guild.explicitContentFilter
-  loggingGuild.region = guild.region
-  loggingGuild.memberCount = guild.memberCount
+  var prefix = Config.settings.prefix
+  var cmd
+  var suffix
 
-  datacontrol.customize.getGuildData(msg.channel.guild).then(function (g) {
-    if (g.customize.prefix === null) {
-      prefix = Config.settings.prefix
-    } else {
-      prefix = g.customize.prefix
-    }
-    var cmd
-    var suffix
-    if (msg.content.startsWith(prefix)) {
-      cmd = msg.content.substr(prefix.length).split(' ')[0].toLowerCase()
-      suffix = msg.content.substr(prefix.length).split(' ')
-      suffix = suffix.slice(1, suffix.length).join(' ')
-    } else if (msg.content.startsWith(bot.user.mention)) {
-      cmd = msg.content.substr(bot.user.mention.length + 1).split(' ')[0].toLowerCase()
-      suffix = msg.content.substr(bot.user.mention.length).split(' ')
-      suffix = suffix.slice(2, suffix.length).join(' ')
-    } else if (msg.content.startsWith(`<@!${bot.user.id}>`)) {
-      cmd = msg.content.substr(`<@!${bot.user.id}>`.length + 1).split(' ')[0].toLowerCase()
-      suffix = msg.content.substr(`<@!${bot.user.id}>`.length).split(' ')
-      suffix = suffix.slice(2, suffix.length).join(' ')
-    }
-    if (cmd === 'help') {
-      runtime.commandcontrol.helpHandle(bot, msg, suffix)
-    }
-    if (aliases[cmd]) {
-      cmd = aliases[cmd].name
-    }
-    if (commands[cmd]) {
-      if (typeof commands[cmd] !== 'object') {
-        return // ignore JS built-in array functions
+  if (msg.channel.type === 0) {
+    var guild = msg.channel.guild
+    var loggingGuild = {}
+    loggingGuild.id = guild.id
+    loggingGuild.name = guild.name
+    loggingGuild.ownerID = guild.ownerID
+    loggingGuild.icon = guild.icon
+    loggingGuild.splash = guild.splash // Only because doug wants EVERYTHING. We have no realistic use for most of this.
+    loggingGuild.roles = guild.roles.size
+    loggingGuild.afkChannelID = guild.afkChannelID
+    loggingGuild.afkTimeout = guild.afkTimeout
+    loggingGuild.verificationLevel = guild.verificationLevel
+    loggingGuild.explicitContentFilter = guild.explicitContentFilter
+    loggingGuild.region = guild.region
+    loggingGuild.memberCount = guild.memberCount
+    datacontrol.customize.getGuildData(msg.channel.guild).then(function (g) {
+      if (g.customize.prefix !== null) {
+        prefix = g.customize.prefix
       }
-      Logger.info(`Executing <${msg.cleanContent}> from ${msg.author.username}`, {
-        author: msg.author.username,
-        authorID: msg.author.id,
-        guild: loggingGuild,
-        botID: bot.user.id,
-        cmd: cmd,
-        shard: guild.shard.id
-      })
-      if (commands[cmd].level === 'master') {
-        if (Config.permissions.master.indexOf(msg.author.id) > -1) {
-          try {
-            commands[cmd].fn(msg, suffix, bot)
-          } catch (e) {
-            bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
-            Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-              author: msg.author.username,
-              authorID: msg.author.id,
-              guild: loggingGuild,
-              botID: bot.user.id,
-              cmd: cmd,
-              shard: guild.shard.id,
-              error: e
-            })
+      if (msg.content.startsWith(prefix)) {
+        cmd = msg.content.substr(prefix.length).split(' ')[0].toLowerCase()
+        suffix = msg.content.substr(prefix.length).split(' ')
+        suffix = suffix.slice(1, suffix.length).join(' ')
+      } else if (msg.content.startsWith(bot.user.mention)) {
+        cmd = msg.content.substr(bot.user.mention.length + 1).split(' ')[0].toLowerCase()
+        suffix = msg.content.substr(bot.user.mention.length).split(' ')
+        suffix = suffix.slice(2, suffix.length).join(' ')
+      } else if (msg.content.startsWith(`<@!${bot.user.id}>`)) {
+        cmd = msg.content.substr(`<@!${bot.user.id}>`.length + 1).split(' ')[0].toLowerCase()
+        suffix = msg.content.substr(`<@!${bot.user.id}>`.length).split(' ')
+        suffix = suffix.slice(2, suffix.length).join(' ')
+      }
+
+      if (cmd === 'help') {
+        runtime.commandcontrol.helpHandle(msg, suffix)
+        return
+      }
+      if (aliases[cmd]) {
+        cmd = aliases[cmd].name
+      }
+
+      if (typeof commands[cmd] === 'object') {
+        Logger.info(`Executing <${msg.cleanContent}> from ${msg.author.username}`, {
+          author: msg.author.username,
+          authorID: msg.author.id,
+          guild: loggingGuild,
+          botID: bot.user.id,
+          cmd: cmd,
+          shard: guild !== undefined ? guild.shard.id : 0
+        })
+        if (commands[cmd].level === 'master') {
+          if (Config.permissions.master.includes(msg.author.id)) {
+            try {
+              commands[cmd].fn(msg, suffix, bot)
+            } catch (e) {
+              bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
+              Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
+                author: msg.author.username,
+                authorID: msg.author.id,
+                guild: loggingGuild,
+                botID: bot.user.id,
+                cmd: cmd,
+                shard: guild !== undefined ? guild.shard.id : 0,
+                error: e
+              })
+            }
+          } else {
+            bot.createMessage(msg.channel.id, 'This command is only for the bot owner.')
           }
         } else {
-          bot.createMessage(msg.channel.id, 'This command is only for the bot owner.')
-        }
-      } else if (msg.channel.type === 0) {
-        datacontrol.permissions.checkLevel(msg, msg.author.id, msg.member.roles).then(r => {
-          if (r !== -1) {
-            timeout.check(commands[cmd], msg.channel.guild.id, msg.author.id).then(t => {
-              if (t !== true) {
-                if (g.customize.timeout === null || g.customize.timeout === 'default') {
-                  bot.createMessage(msg.channel.id, `Wait ${Math.round(t)} more seconds before using that again.`)
-                } else {
-                  bot.createMessage(msg.channel.id, g.customize.timeout.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.channel.guild.name).replace(/%channel/, msg.channel.name).replace(/%timeout/, Math.round(t)))
-                }
-              } else {
-                if (r >= commands[cmd].level) {
-                  if (!commands[cmd].hasOwnProperty('nsfw')) {
-                    try {
-                      commands[cmd].fn(msg, suffix, bot)
-                    } catch (e) {
-                      bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
-                      Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
-                        author: msg.author.username,
-                        authorID: msg.author.id,
-                        guild: loggingGuild,
-                        botID: bot.user.id,
-                        cmd: cmd,
-                        shard: guild.shard.id,
-                        error: e
-                      })
-                    }
+          datacontrol.permissions.checkLevel(msg, msg.author.id, msg.member.roles).then(r => {
+            if (r !== -1) {
+              timeout.check(commands[cmd], msg.channel.guild.id, msg.author.id).then(t => {
+                if (t !== true) {
+                  if (g.customize.timeout === null || g.customize.timeout === 'default') {
+                    bot.createMessage(msg.channel.id, `Wait ${Math.round(t)} more seconds before using that again.`)
                   } else {
-                    if (msg.channel.nsfw === true) {
+                    bot.createMessage(msg.channel.id, g.customize.timeout.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.channel.guild.name).replace(/%channel/, msg.channel.name).replace(/%timeout/, Math.round(t)))
+                  }
+                } else {
+                  if (r >= commands[cmd].level) {
+                    if (!commands[cmd].hasOwnProperty('nsfw')) {
                       try {
                         commands[cmd].fn(msg, suffix, bot)
                       } catch (e) {
@@ -190,40 +171,93 @@ bot.on('messageCreate', msg => {
                         })
                       }
                     } else {
-                      if (g.customize.nsfw === null || g.customize.nsfw === 'default') {
-                        bot.createMessage(msg.channel.id, 'This channel does not allow NSFW commands, enable them by setting this channel to NSFW')
+                      if (msg.channel.nsfw === true) {
+                        try {
+                          commands[cmd].fn(msg, suffix, bot)
+                        } catch (e) {
+                          bot.createMessage(msg.channel.id, 'An error occurred while trying to process this command, you should let the bot author know. \n```' + e + '```')
+                          Logger.error(`Command error, thrown by ${commands[cmd].name}: ${e}`, {
+                            author: msg.author.username,
+                            authorID: msg.author.id,
+                            guild: loggingGuild,
+                            botID: bot.user.id,
+                            cmd: cmd,
+                            shard: guild.shard.id,
+                            error: e
+                          })
+                        }
                       } else {
-                        bot.createMessage(msg.channel.id, g.customize.nsfw.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.guild.name).replace(/%channel/, msg.channel.name))
+                        if (g.customize.nsfw === null || g.customize.nsfw === 'default') {
+                          bot.createMessage(msg.channel.id, 'This channel does not allow NSFW commands, enable them by setting this channel to NSFW')
+                        } else {
+                          bot.createMessage(msg.channel.id, g.customize.nsfw.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.guild.name).replace(/%channel/, msg.channel.name))
+                        }
                       }
                     }
-                  }
-                } else {
-                  if (g.customize.perms === null || g.customize.perms === 'default') {
-                    if (r > -1 && !commands[cmd].hidden) {
-                      var reason = (r > 4) ? '**This is a master user only command**, ask the bot owner to add you as a master user if you really think you should be able to use this command.' : 'Ask the server owner to modify your level with `setlevel`.'
-                      bot.createMessage(msg.channel.id, 'You have no permission to run this command!\nYou need level ' + commands[cmd].level + ', you have level ' + r + '\n' + reason)
-                    }
                   } else {
-                    bot.createMessage(msg.channel.id, g.customize.perms.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.channel.guild.name).replace(/%channel/, msg.channel.name).replace(/%nlevel/, commands[cmd].level).replace(/%ulevel/, r))
+                    if (g.customize.perms === null || g.customize.perms === 'default') {
+                      if (r > -1 && !commands[cmd].hidden) {
+                        var reason = (r > 4) ? '**This is a master user only command**, ask the bot owner to add you as a master user if you really think you should be able to use this command.' : 'Ask the server owner to modify your level with `setlevel`.'
+                        bot.createMessage(msg.channel.id, 'You have no permission to run this command!\nYou need level ' + commands[cmd].level + ', you have level ' + r + '\n' + reason)
+                      }
+                    } else {
+                      bot.createMessage(msg.channel.id, g.customize.perms.replace(/%user/g, msg.author.mention).replace(/%server/g, msg.channel.guild.name).replace(/%channel/, msg.channel.name).replace(/%nlevel/, commands[cmd].level).replace(/%ulevel/, r))
+                    }
                   }
                 }
-              }
+              })
+            }
+          }).catch(function (e) {
+            Logger.error('Permission error: ' + e, {
+              author: msg.author.username,
+              authorID: msg.author.id,
+              guild: loggingGuild,
+              botID: bot.user.id,
+              cmd: cmd,
+              shard: guild.shard.id,
+              error: e
             })
-          }
-        }).catch(function (e) {
-          Logger.error('Permission error: ' + e, {
-            author: msg.author.username,
-            authorID: msg.author.id,
-            guild: loggingGuild,
-            botID: bot.user.id,
-            cmd: cmd,
-            shard: guild.shard.id,
-            error: e
           })
-        })
+        }
+      }
+    }).catch(function (e) {
+      if (e.msg === 'None of the pools have an opened connection and failed to open a new one') {
+        Logger.warn('RethinkDB server is not running or I could not connect, process will now exit.')
+        process.exit(1)
       } else {
-        if (commands[cmd].noDM) {
-          bot.createMessage(msg.channel.id, 'This command cannot be used in DM, invite the bot to a server and try this command again.')
+        Logger.error('getGuildData error: ' + e, {
+          author: msg.author.username,
+          authorID: msg.author.id,
+          guild: loggingGuild,
+          botID: bot.user.id,
+          shard: guild !== undefined ? guild.shard.id : 0,
+          error: e
+        })
+      }
+    })
+  } else {
+    if (msg.content.startsWith(prefix)) {
+      cmd = msg.content.substr(prefix.length).split(' ')[0].toLowerCase()
+      suffix = msg.content.substr(prefix.length).split(' ')
+      suffix = suffix.slice(1, suffix.length).join(' ')
+    } else if (msg.content.startsWith(bot.user.mention)) {
+      cmd = msg.content.substr(bot.user.mention.length + 1).split(' ')[0].toLowerCase()
+      suffix = msg.content.substr(bot.user.mention.length).split(' ')
+      suffix = suffix.slice(2, suffix.length).join(' ')
+    }
+    if (cmd === 'help') {
+      runtime.commandcontrol.helpHandle(msg, suffix)
+      return
+    }
+    if (aliases[cmd]) {
+      cmd = aliases[cmd].name
+    }
+    if (commands[cmd].noDM) {
+      bot.createMessage(msg.channel.id, 'This command cannot be used in DM, invite the bot to a server and try this command again.')
+    } else {
+      timeout.check(commands[cmd], msg.channel.id, msg.author.id).then(t => {
+        if (t !== true) {
+          msg.channel.createMessage(`Wait ${Math.round(t)} more seconds to use that command again.`)
         } else {
           datacontrol.permissions.checkLevel(msg, msg.author.id, []).then(function (r) {
             if (r !== -1 && r >= commands[cmd].level) {
@@ -252,58 +286,33 @@ bot.on('messageCreate', msg => {
             })
           })
         }
-      }
-    }
-  }).catch(function (e) {
-    if (e.msg === 'None of the pools have an opened connection and failed to open a new one') {
-      Logger.warn('RethinkDB server is not running or I could not connect, process will now exit.')
-      process.exit(1)
-    } else {
-      Logger.error('Prefix error: ' + e, {
-        author: msg.author.username,
-        authorID: msg.author.id,
-        guild: loggingGuild,
-        botID: bot.user.id,
-        cmd: cmd,
-        shard: guild.shard.id,
-        error: e
       })
     }
-  })
+  }
 })
 
-/* This will remain commented out due to customize needing a welcomechannel method
-bot.Dispatcher.on(Event.GUILD_MEMBER_ADD, function (s) {
-  datacontrol.permissions.isKnown(s.guild)
-  datacontrol.customize.isKnown(s.guild)
-  datacontrol.customize.check(s.guild).then((r) => {
-    if (r === 'on' || r === 'channel') {
-      datacontrol.customize.reply(s, 'welcomeMessage').then((x) => {
-        if (x === null || x === 'default') {
-          s.guild.generalChannel.sendMessage(`Welcome ${s.member.username} to ${s.guild.name}!`)
-        } else {
-          s.guild.generalChannel.sendMessage(x.replace(/%user/g, s.member.mention).replace(/%server/g, s.guild.name))
-        }
-      }).catch((e) => {
-        Logger.error(e)
-      })
-    } else if (r === 'private') {
-      datacontrol.customize.reply(s, 'welcomeMessage').then((x) => {
-        if (x === null || x === 'default') {
-          s.member.openDM().then((g) => g.sendMessage(`Welcome to ${s.guild.name}! Please enjoy your stay!`))
-        } else {
-          s.member.openDM().then((g) => g.sendMessage(x.replace(/%user/g, s.member.mention).replace(/%server/g, s.guild.name)))
-        }
-      }).catch((e) => {
-        Logger.error(e)
-      })
+bot.on('guildMemberAdd', function (guild, m) {
+  datacontrol.permissions.isKnown(guild)
+  datacontrol.customize.isKnown(guild)
+  datacontrol.customize.getGuildData(guild).then(g => {
+    if (g.customize.welcome === 'private') {
+      if (g.customize.welcomeMessage === null || g.customize.welcomeMessage === 'default') {
+        bot.users.find(u => u.id === m.id).getDMChannel().then((dm) => dm.createMessage(`Welcome to ${guild.name}! Please enjoy your stay!`))
+      } else {
+        bot.users.find(u => u.id === m.id).getDMChannel().then((dm) => dm.createMessage(g.customize.welcomeMessage.replace(/%user/g, m.mention).replace(/%server/g, guild.name)))
+      }
+    } else if (!['off', false, null].includes(g.customize.welcome)) {
+      if (g.customize.welcomeMessage === null || g.customize.welcomeMessage === 'default') {
+        guild.channels.find(c => c.id === g.customize.welcome).createMessage(`Welcome ${m.username} to ${guild.name}!`)
+      } else {
+        guild.channels.find(c => c.id === g.customize.welcome).createMessage(g.customize.welcomeMessage.replace(/%user/g, m.mention).replace(/%server/g, guild.name))
+      }
     }
   }).catch((e) => {
     Logger.error(e)
   })
-  datacontrol.users.isKnown(s.member)
+  datacontrol.users.isKnown(m)
 })
-*/
 
 bot.on('guildCreate', function (guild) {
   datacontrol.permissions.isKnown(guild)
@@ -342,7 +351,7 @@ bot.on('shardDisconnect', function (error, id) {
 
 process.on('unhandledRejection', (reason, p) => {
   if (p !== null && reason !== null) {
-    bugsnag.notify(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
+    Logger.error(new Error(`Unhandled promise: ${require('util').inspect(p, {depth: 3})}: ${reason}`))
   }
 })
 

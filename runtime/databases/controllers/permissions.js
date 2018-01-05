@@ -146,6 +146,7 @@ function initialize (guild) {
         nsfw: null,
         perms: null,
         prefix: null,
+        volume: 25,
         timeout: null,
         welcome: false,
         welcomeMessage: null

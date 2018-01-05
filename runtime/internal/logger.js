@@ -2,20 +2,26 @@
 var Winston = require('winston')
 var path = require('path')
 var config = require('../../config.json')
-var Elasticsearch = require('winston-elasticsearch')
+//var Elasticsearch = require('winston-elasticsearch')
+const Sentry = require('winston-raven-sentry');
+
+const options = {
+  dsn: config.api_keys.sentry,
+  level: 'error'
+};
 
 Winston.emitErrs = true
 
 var Logger
 
 if (config.elasticsearch.use === true) {
-  var elasticsearch = require('elasticsearch')
+  /*var elasticsearch = require('elasticsearch')
   var esTransportOpts = {
     level: 'silly',
     consistency: false,
     client: new elasticsearch.Client(config.elasticsearch.client),
     indexPrefix: 'wildbeast'
-  }
+  }*/
   Logger = new Winston.Logger({
     colors: {
       info: 'green',
@@ -25,7 +31,8 @@ if (config.elasticsearch.use === true) {
       silly: 'blue'
     },
     transports: [
-      new Elasticsearch(esTransportOpts),
+      new Sentry(options),
+     /* new Elasticsearch(esTransportOpts),*/
       new (Winston.transports.Console)({
         humanReadableUnhandledException: true,
         level: 'verbose',

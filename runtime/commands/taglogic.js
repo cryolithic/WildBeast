@@ -1,6 +1,6 @@
 var Commands = []
-const TagScript = require('tagscript')
-let compiler = new TagScript()
+const TR = require('tag-replacer').TagReplacer
+let compiler = new TR()
 var Config = require('../../config.json')
 var Dash = require('rethinkdbdash')
 var r = new Dash({
@@ -167,9 +167,7 @@ Commands.tag = {
           if (g === null) {
             msg.channel.createMessage('This tag does not exist.')
           } else {
-            compiler.compile(g.content.replace('@everyone', '@every\u200Bone').replace('@here', '@he\u200Bre')).then((ts) => {
-              msg.channel.createMessage(ts)
-            })
+            msg.channel.createMessage(compiler.replace(g.content.replace('@everyone', '@every\u200Bone').replace('@here', '@he\u200Bre')))
           }
         })
       }

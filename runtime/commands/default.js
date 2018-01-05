@@ -3,8 +3,6 @@ var request = require('superagent')
 var config = require('../../config.json')
 var Logger = require('../internal/logger.js').Logger
 var argv = require('minimist')(process.argv.slice(2))
-var bugsnag = require('bugsnag')
-bugsnag.register(config.api_keys.bugsnag)
 
 function getUptime () {
   var d = Math.floor(process.uptime() / 86400)
@@ -28,8 +26,11 @@ Commands.ping = {
   help: 'I\'ll reply to you with pong!',
   timeout: 10,
   level: 0,
-  fn: function (msg) {
-    msg.channel.createMessage(`Pong! \nLatency: ${msg.channel.guild.shard.latency} ms.`)
+  fn: function (msg, suffix, bot) {
+    let time0 = new Date(msg.timestamp)
+    msg.channel.createMessage(`Pong! \nHeartbeat Latency: ${msg.channel.guild !== undefined ? msg.channel.guild.shard.latency : bot.shards.get(0).latency} ms.`).then(m => {
+      m.edit(`${m.content} \nRTT: ${new Date(m.timestamp) - time0} ms.`)
+    })
   }
 }
 
@@ -114,7 +115,7 @@ Commands.eval = {
     try {
       var returned = eval(suffix) // eslint-disable-line no-eval
       var str = util.inspect(returned, {
-        depth: 1
+        depth: 2
       })
       if (str.length > 1900) {
         str = str.substr(0, 1897)
@@ -125,7 +126,7 @@ Commands.eval = {
         if (returned !== undefined && returned !== null && typeof returned.then === 'function') {
           returned.then(() => {
             var str = util.inspect(returned, {
-              depth: 1
+              depth: 2
             })
             if (str.length > 1900) {
               str = str.substr(0, 1897)
@@ -134,7 +135,7 @@ Commands.eval = {
             ms.edit('```xl\n' + str + '\n```')
           }, (e) => {
             var str = util.inspect(e, {
-              depth: 1
+              depth: 2
             })
             if (str.length > 1900) {
               str = str.substr(0, 1897)
@@ -204,7 +205,7 @@ Commands.twitch = {
       .set({'Accept': 'application/vnd.twitchtv.v3+json', 'Client-ID': config.api_keys.twitchId})
       .end((error, response) => {
         if (error) {
-          bugsnag.notify(error)
+          Logger.error(error)
         }
         if (!error && response.statusCode === 200) {
           var resp
@@ -233,7 +234,7 @@ Commands.customize = {
   help: 'Adjust my behaviour in this server!',
   noDM: true,
   level: 3,
-  fn: function (msg, suffix) {
+  fn: function (msg, suffix, bot) {
     var c = require('../databases/controllers/customize.js')
     suffix = suffix.split(' ')
     var x = suffix.slice(1, suffix.length).join(' ')
@@ -245,8 +246,8 @@ Commands.customize = {
     } else if (suffix[0] === 'help') {
       c.helpHandle(msg)
     } else {
-      c.adjust(msg, suffix[0], x).then((r) => {
-        msg.channel.createMessage(':ok_hand: Adjusted ' + suffix[0] + ' to `' + r + '`')
+      c.adjust(msg, suffix[0], x, bot).then((r) => {
+        msg.channel.createMessage(':ok_hand: Adjusted ' + suffix[0] + ' to **' + r + '**')
       }).catch((e) => {
         msg.channel.createMessage('Whoops, ' + e)
       })
@@ -355,7 +356,6 @@ Commands.setlevel = {
         msg.channel.createMessage('Alright! The permission levels have been set successfully!')
       }).catch(function (err) {
         msg.channel.createMessage('Help! Something went wrong!')
-        bugsnag.notify(err)
         Logger.error(err)
       })
     }
@@ -464,18 +464,16 @@ Commands.rankup = {
             users.shift()
             safeLoop(msg, authorLevel, users, list)
           } else if ((authorLevel === 3 && level < 2) || (authorLevel > 3 && level < 3)) {
-            Permissions.adjustLevel(msg, users[0], level + 1, []).then(() => {
+            Permissions.adjustLevel(msg, [users[0]], level + 1, []).then(() => {
               list.success.push(users[0].username)
               users.shift()
               safeLoop(msg, authorLevel, users, list)
             }).catch(err => {
-              bugsnag.notify(err)
               Logger.error(err)
             })
           }
         }).catch(err => {
           msg.channel.createMessage('Help! Something went wrong!')
-          bugsnag.notify(err)
           Logger.error(err)
         })
       }
@@ -530,7 +528,7 @@ Commands.setstatus = {
         })
         msg.channel.createMessage(`Set status to ${first[0]} with message ${suffix.substring(first[0].length + 1)}`)
       } else if (suffix.substring(first[0].length + 1).length < 1) {
-        msg.reply('Can only be `online`, `idle`, `dnd` or `invisible`!')
+        msg.channel.createMessage(`${msg.author.mention}, can only be \`online\`, \`idle\`, \`dnd\` or \`invisible\`!`)
       } else {
         bot.editStatus('online', {
           game: {
@@ -601,7 +599,7 @@ Commands.userinfo = {
   level: 0,
   fn: function (msg, suffix, bot) {
     var Permissions = require('../databases/controllers/permissions.js')
-    if (msg.mentions.length === 0) {
+    if (suffix.length === 0) {
       Permissions.checkLevel(msg, msg.author.id, msg.member.roles).then((level) => {
         var tempRoles = msg.member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
           return a.position - b.position
@@ -635,13 +633,27 @@ Commands.userinfo = {
         msg.channel.createMessage('Something went wrong, try again later.')
         Logger.error(error)
       })
-      return
+    } else {
+      const regex = /[<!@>]/gmi;
+      let who = suffix.split(' ')
+      console.log(who)
+      who.map(function (user) {
+        user = user.replace(regex, '')
+        getUserInfo(user)
+      })
     }
-    msg.mentions.map(function (user) {
-      Permissions.checkLevel(msg, user.id, msg.channel.guild.members.get(user.id).roles).then(function (level) {
-        var guild = msg.channel.guild
-        var member = guild.members.get(user.id)
-        var tempRoles = member.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
+    function getUserInfo(who) {
+      console.log(who)
+      if (isNaN(who)) {
+        who = who.split('#')
+        console.log(msg.channel.guild.members.find(u => u.username.toLowerCase() === who[0].toLowerCase() && u.discriminator === who[1]))
+      } else {
+        console.log(msg.channel.guild.members.get(who))
+      }
+    }
+    function createEmbed(user) {
+      Permissions.checkLevel(msg, user.id, user.roles).then((level) => {
+        var tempRoles = user.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
           return a.position - b.position
         }).reverse()
         var roles = []
@@ -650,30 +662,25 @@ Commands.userinfo = {
         }
         roles = roles.splice(0, roles.length).join(', ')
         var field = [
-          {name: 'Status', value: '```\n' + member.status + '```', inline: true},
-          {name: 'Account Creation', value: '```\n' + new Date(member.createdAt) + '```'},
+          {name: 'Status', value: '```\n' + msg.member.status + '```', inline: true},
+          {name: 'Account Creation', value: '```\n' + new Date(msg.member.createdAt) + '```'},
           {name: 'Access Level', value: '```\n' + level + '```'},
           {name: 'Roles', value: '```\n' + `${tempRoles.length > 0 ? roles : 'None'}` + '```'}]
-        if (member.game) {
-          field.splice(1, 0, {name: 'Playing', value: '```\n' + member.game.name + '```', inline: true})
+        if (msg.member.game) {
+          field.splice(1, 0, {name: 'Playing', value: '```\n' + msg.member.game.name + '```', inline: true})
         }
         var embed = {
-          author: {name: `${user.username}#${user.discriminator} (${user.id})`},
+          author: {name: `${msg.author.username}#${msg.author.discriminator} (${msg.author.id})`},
           timestamp: new Date(),
           fields: field,
           footer: {text: `Online for ${getUptime()}`, icon_url: bot.user.avatarURL}
         }
-        if (user.avatarURL) {
-          embed.author.icon_url = user.avatarURL
-          embed.thumbnail = {url: user.avatarURL}
-          embed.url = user.avatarURL
+        if (msg.author.avatarURL) {
+          embed.author.icon_url = msg.author.avatarURL
+          embed.thumbnail = {url: msg.author.avatarURL}
+          embed.url = msg.author.avatarURL
         }
-        msg.channel.createMessage({embed: embed})
-      }).catch(function (err) {
-        Logger.error(err)
-        msg.channel.createMessage('Something went wrong, try again later.')
-      })
-    })
+    }
   }
 }
 
@@ -991,7 +998,7 @@ Commands.colorrole = {
       msg.channel.createMessage(`<@${msg.author.id}>, Invalid hex value!`)
       return
     }
-    if (typeof msg.member.roles.find(r => r === role.id) !== 'object' && msg.author.id !== msg.channel.guild.ownerID) {
+    if (!msg.member.roles.includes(role.id) && msg.author.id !== msg.channel.guild.ownerID) {
       msg.channel.createMessage(`<@${msg.author.id}>, You do not have that role!`)
       return
     }

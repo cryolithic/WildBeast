@@ -1,10 +1,8 @@
 var Commands = []
 var Logger = require('../internal/logger.js').Logger
 var Giphy = require('../giphy.js')
-var Cleverbot = require('cleverbot.io')
 var config = require('../../config.json')
 var request = require('superagent')
-var cleverbot = new Cleverbot(config.api_keys.cleverbot_user, config.api_keys.cleverbot_key)
 
 Commands.gif = {
   name: 'gif',
@@ -53,26 +51,6 @@ Commands.rip = {
       resolve[0] = suffix
     }
     msg.channel.createMessage('http://ripme.xyz/' + qs.stringify(resolve).substr(2))
-  }
-}
-
-Commands.fortunecow = {
-  name: 'fortunecow',
-  help: 'I\'ll get a random fortunecow!',
-  timeout: 20,
-  level: 0,
-  fn: function (msg) {
-    request.get('https://fortunecow.dougley.com/random')
-      .end((err, result) => {
-        if (!err && result.status === 200) {
-          msg.channel.createMessage(`<@${msg.author.id}>,` + '```' + result.text + '```')
-        } else if (result.status === 429) {
-          msg.channel.createMessage('Too many requests, please try again later.')
-        } else {
-          msg.channel.createMessage('Something went wrong, please try again later.')
-          Logger.warn(err)
-        }
-      })
   }
 }
 
@@ -254,7 +232,7 @@ Commands.yesno = {
       .query({force: suffix})
       .end((err, res) => {
         if (!err && res.status === 200) {
-          msg.createMessage(`<@${msg.author.id}>, ${res.body.image}`)
+          msg.channel.createMessage(`<@${msg.author.id}>, ${res.body.image}`)
         } else {
           Logger.error(`Got an error: ${err}, status code: ${res.status}`)
         }
@@ -270,7 +248,7 @@ Commands.urbandictionary = {
   level: 0,
   fn: function (msg, suffix) {
     if (!suffix) {
-      msg.reply('Yes, let\'s just look up absolutely nothing.')
+      msg.channel.createMessage(`<@${msg.author.id}>, Yes, let\'s just look up absolutely nothing.`)
     } else {
       request.get('http://api.urbandictionary.com/v0/define')
         .query({term: suffix})
@@ -380,24 +358,6 @@ Commands.fancyinsult = {
   }
 }
 
-Commands.cleverbot = {
-  name: 'cleverbot',
-  help: 'Talk to cleverbot!',
-  aliases: ['chat', 'cb', 'talk'],
-  level: 0,
-  fn: function (msg, suffix) {
-    cleverbot.create(function (err, session) {
-      if (err) Logger.error(err)
-      cleverbot.setNick('wildbeast')
-      msg.channel.sendTyping()
-      cleverbot.ask(suffix, function (e, r) {
-        if (e) Logger.error(e)
-        msg.channel.createMessage(r)
-      })
-    })
-  }
-}
-
 Commands.e621 = {
   name: 'e621',
   help: 'e621, the definition of *Stop taking the Internet so seriously.*',
@@ -484,7 +444,7 @@ Commands.meme = {
     var imgflipper = new Imgflipper(config.api_keys.imgflip.username, config.api_keys.imgflip.password)
     imgflipper.generateMeme(meme[memetype], tags[1] ? tags[1] : '', tags[3] ? tags[3] : '', (err, image) => {
       if (err) {
-        msg.reply('Please try again, use `help meme` if you do not know how to use this command.')
+        msg.channel.createMessage(`<@${msg.author.id}>, Please try again, use \`help meme\` if you do not know how to use this command.`)
       } else {
         var user = bot.user
         if (msg.channel.guild) {
@@ -628,7 +588,7 @@ Commands.shorten = {
   fn: function (msg, suffix) {
     var url = require('url')
     if (suffix.length === 0) {
-      msg.reply('Enter an url!')
+      msg.channel.createMessage(`<@${msg.author.id}>, Enter an url!`)
       return
     }
     if (url.parse(suffix).hostname) {

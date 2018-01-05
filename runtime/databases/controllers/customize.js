@@ -77,7 +77,7 @@ exports.reply = function (msg, what) {
   })
 }
 
-exports.helpHandle = function (bot, msg) {
+exports.helpHandle = function (msg) {
   // You will just have to deal with the fact that this is static
   var arr = []
   arr.push('`customize` enables you to adjust various settings about my behaviour in your server.')
@@ -109,7 +109,7 @@ exports.helpHandle = function (bot, msg) {
     y.createMessage(arr.join('\n'))
   }).catch((e) => {
     Logger.error(e)
-    bot.createMessage(msg.channel.id, 'Whoops, try again.')
+    msg.channel.createMessage('Whoops, try again.')
   })
 }
 
@@ -131,7 +131,7 @@ exports.restore = function (guild) {
   })
 }
 
-exports.adjust = function (msg, what, how) {
+exports.adjust = function (msg, what, how, bot) {
   /* eslint indent: 0 */
   return new Promise(function (resolve, reject) {
     getDatabaseDocument(msg.channel.guild).then(() => {
@@ -184,12 +184,12 @@ exports.adjust = function (msg, what, how) {
           })
           break
         case 'welcoming':
-          if (how !== 'on' && how !== 'off' && how !== 'private' && how !== 'channel') {
+          if (how !== 'off' && how !== 'private' && !msg.channel.guild.channels.find(c => c.type === 0 && c.id === how.replace(/[<#>]/g, ''))) {
             return reject('`Invalid target.`')
           }
           r.db('Discord').table('Guilds').get(msg.channel.guild.id).update({
             customize: {
-              welcome: how
+              welcome: how.replace(/[<#>]/g, '')
             }
           }).run().then(() => {
             resolve(how)
@@ -227,8 +227,9 @@ exports.adjust = function (msg, what, how) {
           reject('Unsupported method')
           break
       }
-    }).catch(() => {
+    }).catch((e) => {
       initialize(msg.channel.guild)
+      console.error(e)
       reject('No database')
     })
   })

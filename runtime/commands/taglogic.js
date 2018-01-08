@@ -1,5 +1,5 @@
 var Commands = []
-const TR = require('tag-replacer').TagReplacer
+const TR = require('tag-replacer')
 let compiler = new TR()
 var Config = require('../../config.json')
 var Dash = require('rethinkdbdash')

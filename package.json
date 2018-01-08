@@ -35,7 +35,6 @@
   },
   "license": "GPL-3.0",
   "dependencies": {
-    "bugsnag": "^1.12.2",
     "cleverbot.io": "^1.0.4",
     "eris": "github:abalabahaha/eris",
     "eris-lavalink": "github:briantanner/eris-lavalink",
@@ -47,7 +46,7 @@
     "rethinkdbdash": "^2.3.31",
     "semver": "^5.4.1",
     "superagent": "^3.8.0",
-    "tag-replacer": "^1.1.0",
+    "tag-replacer": "^1.2.0",
     "winston": "^2.4.0",
     "winston-daily-rotate-file": "^1.7.2",
     "winston-elasticsearch": "^0.5.3",

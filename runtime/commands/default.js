@@ -634,7 +634,7 @@ Commands.userinfo = {
         Logger.error(error)
       })
     } else {
-      const regex = /[<!@>]/gmi;
+      const regex = /[<!@>]/gmi
       let who = suffix.split(' ')
       console.log(who)
       who.map(function (user) {
@@ -642,7 +642,8 @@ Commands.userinfo = {
         getUserInfo(user)
       })
     }
-    function getUserInfo(who) {
+
+    function getUserInfo (who) {
       console.log(who)
       if (isNaN(who)) {
         who = who.split('#')
@@ -651,7 +652,8 @@ Commands.userinfo = {
         console.log(msg.channel.guild.members.get(who))
       }
     }
-    function createEmbed(user) {
+
+    function createEmbed (user) {
       Permissions.checkLevel(msg, user.id, user.roles).then((level) => {
         var tempRoles = user.roles.map(r => msg.channel.guild.roles.get(r)).sort(function (a, b) {
           return a.position - b.position
@@ -680,6 +682,7 @@ Commands.userinfo = {
           embed.thumbnail = {url: msg.author.avatarURL}
           embed.url = msg.author.avatarURL
         }
+      })
     }
   }
 }
